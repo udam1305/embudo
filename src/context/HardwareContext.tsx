@@ -1,0 +1,285 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { CPU, GPU, RAM, Storage, MobileSoC, PrebuiltPC, DiagnosisConfig, BottleneckResult } from '../types';
+import {
+  INITIAL_CPUS,
+  INITIAL_GPUS,
+  INITIAL_RAMS,
+  INITIAL_STORAGES,
+  INITIAL_SOCS,
+  INITIAL_PREBUILTS
+} from '../data/initialData';
+import { calculateBottleneck } from '../lib/calculatorEngine';
+
+interface HardwareContextType {
+  cpus: CPU[];
+  gpus: GPU[];
+  rams: RAM[];
+  storages: Storage[];
+  socs: MobileSoC[];
+  prebuilts: PrebuiltPC[];
+  currentConfig: DiagnosisConfig;
+  currentResult: BottleneckResult;
+  updateConfig: (patch: Partial<DiagnosisConfig>) => void;
+  recentSearches: string[];
+  addRecentSearch: (query: string) => void;
+  clearRecentSearches: () => void;
+  reloadComponents: () => Promise<void>;
+  addOrUpdateCpu: (cpu: CPU) => Promise<boolean>;
+  deleteCpu: (id: string) => Promise<boolean>;
+  addOrUpdateGpu: (gpu: GPU) => Promise<boolean>;
+  deleteGpu: (id: string) => Promise<boolean>;
+  addOrUpdateSoc: (soc: MobileSoC) => Promise<boolean>;
+  deleteSoc: (id: string) => Promise<boolean>;
+}
+
+const HardwareContext = createContext<HardwareContextType | undefined>(undefined);
+
+// Default seed configuration as requested: AMD Ryzen 7 7800X3D + RTX 5070 Ti in 1440p
+const DEFAULT_CONFIG: DiagnosisConfig = {
+  cpu: INITIAL_CPUS[0], // AMD Ryzen 7 7800X3D
+  gpu: INITIAL_GPUS[0], // NVIDIA GeForce RTX 5070 Ti
+  ram: INITIAL_RAMS[0], // 32GB DDR5 6000MHz Dual
+  storage: INITIAL_STORAGES[1], // 2TB NVMe Gen4
+  resolution: '1440p',
+  workload: 'gaming',
+  os: 'Windows 11'
+};
+
+export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [cpus, setCpus] = useState<CPU[]>(INITIAL_CPUS);
+  const [gpus, setGpus] = useState<GPU[]>(INITIAL_GPUS);
+  const [rams] = useState<RAM[]>(INITIAL_RAMS);
+  const [storages] = useState<Storage[]>(INITIAL_STORAGES);
+  const [socs, setSocs] = useState<MobileSoC[]>(INITIAL_SOCS);
+  const [prebuilts, setPrebuilts] = useState<PrebuiltPC[]>(INITIAL_PREBUILTS);
+
+  const [currentConfig, setCurrentConfig] = useState<DiagnosisConfig>(DEFAULT_CONFIG);
+  const [currentResult, setCurrentResult] = useState<BottleneckResult>(() => calculateBottleneck(DEFAULT_CONFIG));
+
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('embudo_recent_searches');
+      return stored ? JSON.parse(stored) : ['Ryzen 7 7800X3D', 'RTX 5070 Ti', 'Snapdragon 8 Elite', 'Core i7-14700K'];
+    } catch {
+      return ['Ryzen 7 7800X3D', 'RTX 5070 Ti'];
+    }
+  });
+
+  // Load from API on mount
+  const reloadComponents = async () => {
+    try {
+      const res = await fetch('/api/components/all');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.cpus) setCpus(data.cpus);
+        if (data.gpus) setGpus(data.gpus);
+        if (data.socs) setSocs(data.socs);
+      }
+    } catch (e) {
+      console.warn('Using local seed hardware catalog:', e);
+    }
+  };
+
+  useEffect(() => {
+    reloadComponents();
+  }, []);
+
+  // Update calculation whenever config changes
+  useEffect(() => {
+    const res = calculateBottleneck(currentConfig);
+    setCurrentResult(res);
+  }, [currentConfig]);
+
+  const updateConfig = (patch: Partial<DiagnosisConfig>) => {
+    setCurrentConfig(prev => ({
+      ...prev,
+      ...patch
+    }));
+  };
+
+  const addRecentSearch = (query: string) => {
+    if (!query || query.trim().length < 2) return;
+    const clean = query.trim();
+    setRecentSearches(prev => {
+      const filtered = prev.filter(item => item.toLowerCase() !== clean.toLowerCase());
+      const updated = [clean, ...filtered].slice(0, 10);
+      localStorage.setItem('embudo_recent_searches', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+    localStorage.removeItem('embudo_recent_searches');
+  };
+
+  // Admin operations
+  const addOrUpdateCpu = async (cpu: CPU): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('embudo_admin_token');
+      const res = await fetch('/api/components/cpu', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(cpu)
+      });
+      if (res.ok) {
+        setCpus(prev => {
+          const idx = prev.findIndex(c => c.id === cpu.id);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = cpu;
+            return next;
+          }
+          return [cpu, ...prev];
+        });
+        return true;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    // Local fallback
+    setCpus(prev => [cpu, ...prev.filter(c => c.id !== cpu.id)]);
+    return true;
+  };
+
+  const deleteCpu = async (id: string): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('embudo_admin_token');
+      await fetch(`/api/components/cpu/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    setCpus(prev => prev.filter(c => c.id !== id));
+    return true;
+  };
+
+  const addOrUpdateGpu = async (gpu: GPU): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('embudo_admin_token');
+      const res = await fetch('/api/components/gpu', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(gpu)
+      });
+      if (res.ok) {
+        setGpus(prev => {
+          const idx = prev.findIndex(g => g.id === gpu.id);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = gpu;
+            return next;
+          }
+          return [gpu, ...prev];
+        });
+        return true;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setGpus(prev => [gpu, ...prev.filter(g => g.id !== gpu.id)]);
+    return true;
+  };
+
+  const deleteGpu = async (id: string): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('embudo_admin_token');
+      await fetch(`/api/components/gpu/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    setGpus(prev => prev.filter(g => g.id !== id));
+    return true;
+  };
+
+  const addOrUpdateSoc = async (soc: MobileSoC): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('embudo_admin_token');
+      const res = await fetch('/api/components/soc', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(soc)
+      });
+      if (res.ok) {
+        setSocs(prev => {
+          const idx = prev.findIndex(s => s.id === soc.id);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = soc;
+            return next;
+          }
+          return [soc, ...prev];
+        });
+        return true;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setSocs(prev => [soc, ...prev.filter(s => s.id !== soc.id)]);
+    return true;
+  };
+
+  const deleteSoc = async (id: string): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('embudo_admin_token');
+      await fetch(`/api/components/soc/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    setSocs(prev => prev.filter(s => s.id !== id));
+    return true;
+  };
+
+  return (
+    <HardwareContext.Provider
+      value={{
+        cpus,
+        gpus,
+        rams,
+        storages,
+        socs,
+        prebuilts,
+        currentConfig,
+        currentResult,
+        updateConfig,
+        recentSearches,
+        addRecentSearch,
+        clearRecentSearches,
+        reloadComponents,
+        addOrUpdateCpu,
+        deleteCpu,
+        addOrUpdateGpu,
+        deleteGpu,
+        addOrUpdateSoc,
+        deleteSoc
+      }}
+    >
+      {children}
+    </HardwareContext.Provider>
+  );
+};
+
+export const useHardware = () => {
+  const context = useContext(HardwareContext);
+  if (!context) {
+    throw new Error('useHardware must be used within a HardwareProvider');
+  }
+  return context;
+};

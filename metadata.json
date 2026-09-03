@@ -1,0 +1,6 @@
+{
+  "name": "Embudo - Diagnóstico de Cuello de Botella PC & Móvil",
+  "description": "Calculadora y diagnóstico de cuello de botella para PC y Smartphones. Análisis de FPS, Watts recomendados, comparador y optimización térmica.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
