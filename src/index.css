@@ -1,45 +1,71 @@
 @import "tailwindcss";
 
 @layer base {
-  :root {
+  :root,
+  html.dark {
+    color-scheme: dark;
     --bg-main: #0A0C10;
     --bg-nav: #0F1218;
     --bg-card: #151921;
     --bg-input: #1C222D;
     --bg-footer: #080A0E;
     --border-color: #1E2533;
+    --border-subtle: #1E2533;
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --card-shadow: none;
+    --scrollbar-track: #0A0C10;
+    --scrollbar-thumb: #1E2533;
+  }
+
+  html.light:not(.dark) {
+    color-scheme: light;
+    --bg-main: #F8FAFC;
+    --bg-nav: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-input: #F1F5F9;
+    --bg-footer: #FFFFFF;
+    --border-color: #E2E8F0;
+    --border-subtle: #E2E8F0;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+    --scrollbar-track: #F1F5F9;
+    --scrollbar-thumb: #CBD5E1;
   }
 
   body {
-    background-color: #0A0C10;
-    color: #F1F5F9;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   }
 }
 
-/* Sleek Interface Custom Utilities */
+/* Sleek Interface Utilities linked to CSS Variables */
 .bg-sleek-main {
-  background-color: #0A0C10;
+  background-color: var(--bg-main);
 }
 
 .bg-sleek-nav {
-  background-color: #0F1218;
+  background-color: var(--bg-nav);
 }
 
 .bg-sleek-card {
-  background-color: #151921;
+  background-color: var(--bg-card);
 }
 
 .bg-sleek-input {
-  background-color: #1C222D;
+  background-color: var(--bg-input);
 }
 
 .bg-sleek-footer {
-  background-color: #080A0E;
+  background-color: var(--bg-footer);
 }
 
 .border-sleek {
-  border-color: #1E2533;
+  border-color: var(--border-color);
 }
 
 /* Custom Sleek Scrollbar */
@@ -49,14 +75,183 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #0A0C10;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1E2533;
+  background: var(--scrollbar-thumb);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #06B6D4;
+}
+
+/* =========================================================
+   LIGHT THEME OVERRIDES (strictly applied ONLY when html.light:not(.dark))
+   ========================================================= */
+
+/* Backgrounds */
+html.light:not(.dark) [class*="bg-[#0A0C10]"] {
+  background-color: #F8FAFC !important;
+}
+
+html.light:not(.dark) [class*="bg-[#0F1218]"] {
+  background-color: #FFFFFF !important;
+}
+
+html.light:not(.dark) [class*="bg-[#151921]"] {
+  background-color: #FFFFFF !important;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+}
+
+html.light:not(.dark) [class*="bg-[#1C222D]"] {
+  background-color: #F1F5F9 !important;
+}
+
+html.light:not(.dark) [class*="bg-[#080A0E]"] {
+  background-color: #FFFFFF !important;
+}
+
+html.light:not(.dark) .bg-slate-950 {
+  background-color: #F1F5F9 !important;
+}
+
+html.light:not(.dark) .bg-slate-900 {
+  background-color: #FFFFFF !important;
+}
+
+html.light:not(.dark) .bg-slate-800 {
+  background-color: #E2E8F0 !important;
+}
+
+/* Hovers */
+html.light:not(.dark) .hover\:bg-slate-800:hover {
+  background-color: #E2E8F0 !important;
+}
+
+html.light:not(.dark) .hover\:bg-slate-700:hover {
+  background-color: #CBD5E1 !important;
+}
+
+html.light:not(.dark) .hover\:bg-\[\#1C222D\]:hover {
+  background-color: #E2E8F0 !important;
+}
+
+html.light:not(.dark) .hover\:bg-\[\#151921\]:hover {
+  background-color: #F8FAFC !important;
+}
+
+/* Borders */
+html.light:not(.dark) [class*="border-slate-800"] {
+  border-color: #E2E8F0 !important;
+}
+
+html.light:not(.dark) [class*="border-slate-700"] {
+  border-color: #CBD5E1 !important;
+}
+
+html.light:not(.dark) [class*="border-slate-600"] {
+  border-color: #94A3B8 !important;
+}
+
+/* Text Colors */
+html.light:not(.dark) .text-slate-100 {
+  color: #0F172A !important;
+}
+
+html.light:not(.dark) .text-slate-200 {
+  color: #1E293B !important;
+}
+
+html.light:not(.dark) .text-slate-300 {
+  color: #334155 !important;
+}
+
+html.light:not(.dark) .text-slate-400 {
+  color: #475569 !important;
+}
+
+html.light:not(.dark) .text-slate-500 {
+  color: #64748B !important;
+}
+
+/* Headings in light mode */
+html.light:not(.dark) h1.text-white,
+html.light:not(.dark) h2.text-white,
+html.light:not(.dark) h3.text-white,
+html.light:not(.dark) h4.text-white,
+html.light:not(.dark) h5.text-white,
+html.light:not(.dark) h6.text-white {
+  color: #0F172A !important;
+}
+
+/* Plain text elements with text-white that are not inside colored buttons */
+html.light:not(.dark) span.text-white:not([class*="bg-"]):not([class*="from-"]):not([class*="rotate-"]),
+html.light:not(.dark) strong.text-white,
+html.light:not(.dark) p.text-white,
+html.light:not(.dark) div.text-white:not([class*="bg-"]):not([class*="from-"]):not([class*="rounded-"]) {
+  color: #0F172A !important;
+}
+
+/* Brand text in Navbar and Footer */
+html.light:not(.dark) header span.text-white,
+html.light:not(.dark) footer span.text-white {
+  color: #0F172A !important;
+}
+
+/* Ensure logo letter stays white */
+html.light:not(.dark) .from-cyan-500 span.text-white {
+  color: #FFFFFF !important;
+}
+
+/* Links hover states */
+html.light:not(.dark) .hover\:text-white:hover {
+  color: #0F172A !important;
+}
+
+/* Form inputs, textareas & selects */
+html.light:not(.dark) input,
+html.light:not(.dark) select,
+html.light:not(.dark) textarea {
+  color: #0F172A !important;
+}
+
+html.light:not(.dark) select option {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+html.light:not(.dark) input::placeholder,
+html.light:not(.dark) textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+/* Accent contrast adjustment for light background readability */
+html.light:not(.dark) .text-cyan-400 {
+  color: #0891B2 !important;
+}
+
+html.light:not(.dark) .text-cyan-300 {
+  color: #0E7490 !important;
+}
+
+html.light:not(.dark) .text-blue-400 {
+  color: #2563EB !important;
+}
+
+html.light:not(.dark) .text-indigo-400 {
+  color: #4F46E5 !important;
+}
+
+html.light:not(.dark) .text-emerald-400 {
+  color: #059669 !important;
+}
+
+html.light:not(.dark) .text-amber-400 {
+  color: #D97706 !important;
+}
+
+html.light:not(.dark) .text-orange-400 {
+  color: #EA580C !important;
 }

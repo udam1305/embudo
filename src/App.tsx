@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { HardwareProvider } from './context/HardwareContext';
 import { Navbar, ActiveTab } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -17,6 +17,7 @@ import { LegalSupportView } from './views/LegalSupportView';
 
 const MainContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('landing');
+  const { isDarkMode } = useAuth();
 
   // Sync with browser hash on initial load and popstate
   useEffect(() => {
@@ -40,7 +41,7 @@ const MainContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0C10] text-slate-100 flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200 antialiased font-sans">
+    <div className={`min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200 antialiased font-sans transition-colors duration-200 ${isDarkMode ? 'bg-[#0A0C10] text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       {/* Top Navigation */}
       <Navbar activeTab={activeTab} setActiveTab={handleTabChange} />
 

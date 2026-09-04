@@ -223,10 +223,13 @@ export const AccountView: React.FC<AccountViewProps> = ({ setActiveTab }) => {
                 <div className="text-[10px] text-slate-400">{isDarkMode ? 'Modo Oscuro Activo' : 'Modo Claro Activo'}</div>
               </div>
               <button
+                id="account-theme-toggle-btn"
                 onClick={toggleDarkMode}
-                className="p-2 rounded-lg bg-[#151921] border border-slate-700 text-cyan-400 hover:bg-slate-800 cursor-pointer"
+                className="p-2 rounded-lg bg-[#151921] border border-slate-700 text-cyan-500 hover:bg-slate-700/40 cursor-pointer transition-colors"
+                title={isDarkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
+                aria-label={isDarkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
               >
-                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-600" />}
               </button>
             </div>
 

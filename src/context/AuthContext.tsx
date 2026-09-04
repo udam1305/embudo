@@ -60,9 +60,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
       localStorage.setItem('embudo_theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
       localStorage.setItem('embudo_theme', 'light');
     }
   }, [isDarkMode]);

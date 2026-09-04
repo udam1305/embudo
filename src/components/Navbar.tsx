@@ -119,8 +119,13 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             <button
               id="nav-theme-toggle-btn"
               onClick={toggleDarkMode}
-              className="p-2 rounded-full text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition-colors cursor-pointer"
+              className={`p-2 rounded-full transition-colors cursor-pointer ${
+                isDarkMode
+                  ? 'text-slate-400 hover:text-amber-400 hover:bg-slate-800'
+                  : 'text-slate-600 hover:text-amber-500 hover:bg-slate-200/80'
+              }`}
               title={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              aria-label={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
@@ -225,6 +230,27 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               </button>
             );
           })}
+
+          {/* Mobile Theme Toggle */}
+          <div className="pt-2 mt-2 border-t border-slate-800/80">
+            <button
+              id="mobile-nav-theme-toggle"
+              onClick={toggleDarkMode}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+                isDarkMode ? 'text-slate-300 hover:bg-[#151921]' : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-600" />}
+                <span>{isDarkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}</span>
+              </div>
+              <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {isDarkMode ? 'Oscuro' : 'Claro'}
+              </span>
+            </button>
+          </div>
         </div>
       )}
     </header>
