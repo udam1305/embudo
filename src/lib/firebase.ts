@@ -3,12 +3,12 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 export const firebaseConfig = {
-  apiKey: "AIzaSyDtPK99-o3orVaECs4HQF-YZ1ue7-xAURg",
-  authDomain: "embudo-a7011.firebaseapp.com",
-  projectId: "embudo-a7011",
-  storageBucket: "embudo-a7011.firebasestorage.app",
-  messagingSenderId: "815397680038",
-  appId: "1:815397680038:web:ee4d0338a94367c1311567"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDtPK99-o3orVaECs4HQF-YZ1ue7-xAURg",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "embudo-a7011.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "embudo-a7011",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "embudo-a7011.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "815397680038",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:815397680038:web:ee4d0338a94367c1311567"
 };
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
