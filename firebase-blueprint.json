@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with synchronization metadata and preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "lastLoginAt": { "type": "string" },
+        "preferences": {
+          "type": "object"
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "Diagnosis": {
+      "title": "Diagnosis",
+      "description": "User's saved PC hardware bottleneck test and evaluation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "config": { "type": "object" },
+        "result": { "type": "object" },
+        "isFavorite": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "title", "createdAt", "config", "result"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile and preferences"
+    },
+    "/users/{userId}/diagnoses/{diagnosisId}": {
+      "schema": "Diagnosis",
+      "description": "Saved bottleneck diagnoses for a specific user"
+    }
+  }
+}

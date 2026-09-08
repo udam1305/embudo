@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, googleProvider } from '../lib/firebase';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { auth, googleProvider, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -8,6 +8,16 @@ import {
   onAuthStateChanged,
   User
 } from 'firebase/auth';
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  deleteDoc,
+  onSnapshot,
+  getDocs,
+  writeBatch
+} from 'firebase/firestore';
 import { UserSavedDiagnosis } from '../types';
 
 interface AuthContextType {
@@ -18,11 +28,12 @@ interface AuthContextType {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   savedDiagnoses: UserSavedDiagnosis[];
-  saveDiagnosis: (item: Omit<UserSavedDiagnosis, 'id' | 'createdAt'>) => void;
-  deleteDiagnosis: (id: string) => void;
-  clearAllHistory: () => void;
+  saveDiagnosis: (item: Omit<UserSavedDiagnosis, 'id' | 'createdAt'>) => Promise<void>;
+  deleteDiagnosis: (id: string) => Promise<void>;
+  clearAllHistory: () => Promise<void>;
   consentTelemetry: boolean;
   setConsentTelemetry: (consent: boolean) => void;
+  isCloudSynced: boolean;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   registerWithEmail: (email: string, pass: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
@@ -37,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [adminToken, setAdminToken] = useState<string | null>(() => localStorage.getItem('embudo_admin_token'));
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('embudo_theme');
     if (saved) return saved === 'dark';
@@ -56,6 +68,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
 
+  const unsubscribeDiagnosesRef = useRef<(() => void) | null>(null);
+
   // Apply dark mode class to html element
   useEffect(() => {
     if (isDarkMode) {
@@ -69,19 +83,146 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [isDarkMode]);
 
-  // Firebase auth state observer
+  // Firebase auth state observer & Firestore User Data Sync
   useEffect(() => {
     try {
-      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
         setUser(currentUser);
+
+        // Clean up previous Firestore listener
+        if (unsubscribeDiagnosesRef.current) {
+          unsubscribeDiagnosesRef.current();
+          unsubscribeDiagnosesRef.current = null;
+        }
+
+        if (currentUser) {
+          setIsCloudSynced(true);
+          const userRef = doc(db, 'users', currentUser.uid);
+
+          // 1. Sync User Profile in Firestore
+          try {
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) {
+              await setDoc(userRef, {
+                uid: currentUser.uid,
+                email: currentUser.email || '',
+                displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Usuario',
+                photoURL: currentUser.photoURL || '',
+                createdAt: new Date().toISOString(),
+                lastLoginAt: new Date().toISOString(),
+                preferences: {
+                  theme: isDarkMode ? 'dark' : 'light',
+                  consentTelemetry: consentTelemetry
+                }
+              });
+            } else {
+              const data = userSnap.data();
+              if (data?.preferences?.theme) {
+                setIsDarkMode(data.preferences.theme === 'dark');
+              }
+              if (typeof data?.preferences?.consentTelemetry === 'boolean') {
+                setConsentTelemetryState(data.preferences.consentTelemetry);
+              }
+              await setDoc(
+                userRef,
+                {
+                  lastLoginAt: new Date().toISOString(),
+                  email: currentUser.email || '',
+                  displayName: currentUser.displayName || data.displayName || currentUser.email?.split('@')[0] || 'Usuario'
+                },
+                { merge: true }
+              );
+            }
+          } catch (profileErr) {
+            console.warn('Could not sync user profile to Firestore:', profileErr);
+          }
+
+          // 2. Auto-migrate existing guest local history if available
+          try {
+            const local = localStorage.getItem('embudo_history');
+            if (local) {
+              const parsed: UserSavedDiagnosis[] = JSON.parse(local);
+              if (parsed.length > 0) {
+                for (const item of parsed) {
+                  await setDoc(
+                    doc(db, 'users', currentUser.uid, 'diagnoses', item.id),
+                    {
+                      id: item.id,
+                      userId: currentUser.uid,
+                      title: item.title,
+                      createdAt: item.createdAt,
+                      config: item.config,
+                      result: item.result,
+                      isFavorite: !!item.isFavorite
+                    },
+                    { merge: true }
+                  );
+                }
+              }
+            }
+          } catch (migErr) {
+            console.warn('Guest history migration note:', migErr);
+          }
+
+          // 3. Realtime Listener on User's Diagnoses Collection
+          try {
+            const diagCol = collection(db, 'users', currentUser.uid, 'diagnoses');
+            const unsub = onSnapshot(
+              diagCol,
+              (snapshot) => {
+                const cloudList: UserSavedDiagnosis[] = [];
+                snapshot.forEach((dSnap) => {
+                  const data = dSnap.data();
+                  cloudList.push({
+                    id: dSnap.id,
+                    title: data.title || 'Diagnóstico',
+                    createdAt: data.createdAt || new Date().toISOString(),
+                    config: data.config,
+                    result: data.result,
+                    isFavorite: !!data.isFavorite
+                  });
+                });
+                cloudList.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+                setSavedDiagnoses(cloudList);
+                localStorage.setItem('embudo_history', JSON.stringify(cloudList));
+              },
+              (err) => {
+                console.warn('Firestore diagnoses listener:', err);
+                try {
+                  handleFirestoreError(err, OperationType.GET, `users/${currentUser.uid}/diagnoses`);
+                } catch {
+                  // Fallback to local storage if Firestore rules or offline
+                }
+              }
+            );
+            unsubscribeDiagnosesRef.current = unsub;
+          } catch (listenerErr) {
+            console.warn('Diagnoses subscription fallback to local:', listenerErr);
+          }
+        } else {
+          setIsCloudSynced(false);
+          // Restore from local storage for guest
+          try {
+            const local = localStorage.getItem('embudo_history');
+            setSavedDiagnoses(local ? JSON.parse(local) : []);
+          } catch {
+            setSavedDiagnoses([]);
+          }
+        }
       });
-      return () => unsubscribe();
+
+      return () => {
+        unsubscribeAuth();
+        if (unsubscribeDiagnosesRef.current) {
+          unsubscribeDiagnosesRef.current();
+        }
+      };
     } catch (e) {
       console.warn('Firebase Auth fallback enabled:', e);
     }
   }, []);
 
-  // Save history to local storage
+  // Save history to local storage backup
   useEffect(() => {
     try {
       localStorage.setItem('embudo_history', JSON.stringify(savedDiagnoses));
@@ -91,36 +232,107 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [savedDiagnoses]);
 
   const toggleDarkMode = () => {
-    setIsDarkMode(prev => !prev);
+    const nextMode = !isDarkMode;
+    setIsDarkMode(nextMode);
+    if (user) {
+      setDoc(
+        doc(db, 'users', user.uid),
+        { preferences: { theme: nextMode ? 'dark' : 'light' } },
+        { merge: true }
+      ).catch(() => {});
+    }
   };
 
   const setConsentTelemetry = (consent: boolean) => {
     setConsentTelemetryState(consent);
     localStorage.setItem('embudo_telemetry_consent', String(consent));
+    if (user) {
+      setDoc(
+        doc(db, 'users', user.uid),
+        { preferences: { consentTelemetry: consent } },
+        { merge: true }
+      ).catch(() => {});
+    }
   };
 
-  const saveDiagnosis = (item: Omit<UserSavedDiagnosis, 'id' | 'createdAt'>) => {
+  const saveDiagnosis = async (item: Omit<UserSavedDiagnosis, 'id' | 'createdAt'>) => {
+    const newId = 'diag-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+    const createdAt = new Date().toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
     const newEntry: UserSavedDiagnosis = {
       ...item,
-      id: 'diag-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
-      createdAt: new Date().toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+      id: newId,
+      createdAt
     };
-    setSavedDiagnoses(prev => [newEntry, ...prev.slice(0, 49)]); // Keep last 50
+
+    // Optimistically update local state
+    setSavedDiagnoses((prev) => [newEntry, ...prev.slice(0, 49)]);
+
+    // If user is authenticated, persist to Firestore
+    if (user) {
+      try {
+        const diagRef = doc(db, 'users', user.uid, 'diagnoses', newId);
+        await setDoc(diagRef, {
+          id: newId,
+          userId: user.uid,
+          title: item.title,
+          createdAt,
+          config: item.config,
+          result: item.result,
+          isFavorite: !!item.isFavorite
+        });
+      } catch (err) {
+        console.error('Failed to save diagnosis to Firestore:', err);
+        try {
+          handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/diagnoses/${newId}`);
+        } catch {
+          // Gracefully continue with local backup
+        }
+      }
+    }
   };
 
-  const deleteDiagnosis = (id: string) => {
-    setSavedDiagnoses(prev => prev.filter(d => d.id !== id));
+  const deleteDiagnosis = async (id: string) => {
+    setSavedDiagnoses((prev) => prev.filter((d) => d.id !== id));
+
+    if (user) {
+      try {
+        const diagRef = doc(db, 'users', user.uid, 'diagnoses', id);
+        await deleteDoc(diagRef);
+      } catch (err) {
+        console.error('Failed to delete diagnosis from Firestore:', err);
+        try {
+          handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/diagnoses/${id}`);
+        } catch {
+          // Graceful fallback
+        }
+      }
+    }
   };
 
-  const clearAllHistory = () => {
+  const clearAllHistory = async () => {
+    const currentList = [...savedDiagnoses];
     setSavedDiagnoses([]);
     localStorage.removeItem('embudo_history');
+
+    if (user) {
+      try {
+        const batch = writeBatch(db);
+        currentList.forEach((d) => {
+          const dRef = doc(db, 'users', user.uid, 'diagnoses', d.id);
+          batch.delete(dRef);
+        });
+        await batch.commit();
+      } catch (err) {
+        console.error('Failed to clear Firestore diagnoses history:', err);
+      }
+    }
   };
 
   const loginWithEmail = async (email: string, pass: string) => {
@@ -136,8 +348,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    if (unsubscribeDiagnosesRef.current) {
+      unsubscribeDiagnosesRef.current();
+      unsubscribeDiagnosesRef.current = null;
+    }
     await fbSignOut(auth);
     setUser(null);
+    setIsCloudSynced(false);
   };
 
   const loginAsAdmin = async (password: string): Promise<boolean> => {
@@ -188,6 +405,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearAllHistory,
         consentTelemetry,
         setConsentTelemetry,
+        isCloudSynced,
         loginWithEmail,
         registerWithEmail,
         loginWithGoogle,

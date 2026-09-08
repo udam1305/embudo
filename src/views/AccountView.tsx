@@ -34,6 +34,7 @@ export const AccountView: React.FC<AccountViewProps> = ({ setActiveTab }) => {
     clearAllHistory,
     consentTelemetry,
     setConsentTelemetry,
+    isCloudSynced,
     loginWithEmail,
     registerWithEmail,
     loginWithGoogle,
@@ -117,9 +118,14 @@ export const AccountView: React.FC<AccountViewProps> = ({ setActiveTab }) => {
                 </div>
               </div>
 
-              <div className="p-3 bg-[#1C222D] rounded-xl border border-slate-700 text-xs text-emerald-400 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>Historial sincronizado en la nube</span>
+              <div className="p-3 bg-[#1C222D] rounded-xl border border-slate-700 text-xs text-emerald-400 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                  <span>Historial sincronizado en Firestore</span>
+                </div>
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300">
+                  {isCloudSynced ? 'En línea' : 'Local'}
+                </span>
               </div>
 
               <button
