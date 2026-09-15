@@ -31,13 +31,24 @@ export const ExportCardModal: React.FC<ExportCardModalProps> = ({ config, result
   };
 
   const handleCopyTextReport = () => {
+    const workloadLabels: Record<string, string> = {
+      gaming: 'Gaming',
+      streaming: 'Streaming',
+      render3d: 'Render 3D',
+      video_edit: 'Edición Video 4K',
+      multitask: 'Multitarea'
+    };
+    const activeTasks = (config.workloads && config.workloads.length > 0)
+      ? config.workloads.map(w => workloadLabels[w] || w).join(' + ')
+      : (workloadLabels[config.workload] || config.workload);
+
     const text = `📊 INFORME DE DIAGNÓSTICO EMBUDO 📊
 -------------------------------------------
 🖥️ Procesador: ${config.cpu.name}
 🎮 Tarjeta Gráfica: ${config.gpu.name}
 ⚡ Memoria RAM: ${config.ram.capacityGb}GB ${config.ram.type} @ ${config.ram.speedMhz}MHz (${config.ram.channels.toUpperCase()})
 💾 Almacenamiento: ${config.storage.type} (${config.storage.capacityGb}GB)
-${config.psu ? `🔌 Tu Fuente (PSU): ${config.psu.name} (${config.psu.wattage}W - ${config.psu.efficiency})\n` : ''}🎯 Resolución objetivo: ${config.resolution.toUpperCase()} | Modo: ${config.workload.toUpperCase()}
+${config.psu ? `🔌 Tu Fuente (PSU): ${config.psu.name} (${config.psu.wattage}W - ${config.psu.efficiency})\n` : ''}🎯 Resolución objetivo: ${config.resolution.toUpperCase()} | Modo: ${activeTasks.toUpperCase()}
 
 📉 Cuello de Botella: ${result.bottleneckPct}% (${result.limitingFactor})
 🔋 Consumo Estimado: ~${result.powerStats.systemEstimatedWatts}W | Fuente Sugerida: ${result.powerStats.recommendedPsuWatts}W

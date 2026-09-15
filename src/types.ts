@@ -86,6 +86,7 @@ export interface DiagnosisConfig {
   psu?: PSU;
   resolution: ResolutionType;
   workload: WorkloadType;
+  workloads?: WorkloadType[];
   os: 'Windows 11' | 'Windows 10' | 'Linux' | 'macOS';
 }
 

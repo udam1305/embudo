@@ -84,6 +84,27 @@ export const PcDiagnosisView: React.FC = () => {
     { id: 'multitask', label: 'Programación & Multitarea', icon: '💻' }
   ];
 
+  const selectedWorkloads: WorkloadType[] = (currentConfig.workloads && currentConfig.workloads.length > 0)
+    ? currentConfig.workloads
+    : [currentConfig.workload || 'gaming'];
+
+  const handleToggleWorkload = (id: WorkloadType) => {
+    let next: WorkloadType[];
+    if (selectedWorkloads.includes(id)) {
+      if (selectedWorkloads.length > 1) {
+        next = selectedWorkloads.filter(w => w !== id);
+      } else {
+        return; // Conservar al menos una tarea seleccionada
+      }
+    } else {
+      next = [...selectedWorkloads, id];
+    }
+    updateConfig({
+      workloads: next,
+      workload: next[0]
+    });
+  };
+
   return (
     <div className="space-y-10 pb-16 max-w-7xl mx-auto px-4 sm:px-6">
       {/* Top Header */}
@@ -359,25 +380,40 @@ export const PcDiagnosisView: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block">
-                USO PRINCIPAL
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 block">
+                  USO PRINCIPAL (MULTIELECCIÓN)
+                </label>
+                <span className="text-[10px] font-mono font-medium text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/60">
+                  {selectedWorkloads.length} seleccionada{selectedWorkloads.length > 1 ? 's' : ''}
+                </span>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {workloads.map(w => (
-                  <button
-                    key={w.id}
-                    id={`diag-workload-btn-${w.id}`}
-                    onClick={() => updateConfig({ workload: w.id })}
-                    className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer flex items-center gap-2 ${
-                      currentConfig.workload === w.id
-                        ? 'bg-cyan-500/15 border-cyan-500 text-cyan-300 shadow-sm shadow-cyan-500/10'
-                        : 'bg-[#1C222D] border-slate-700 text-slate-400 hover:border-slate-600'
-                    }`}
-                  >
-                    <span className="text-sm">{w.icon}</span>
-                    <span className="text-xs font-semibold">{w.label}</span>
-                  </button>
-                ))}
+                {workloads.map(w => {
+                  const isSelected = selectedWorkloads.includes(w.id);
+                  return (
+                    <button
+                      key={w.id}
+                      id={`diag-workload-btn-${w.id}`}
+                      onClick={() => handleToggleWorkload(w.id)}
+                      className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-cyan-500/15 border-cyan-500 text-cyan-300 shadow-sm shadow-cyan-500/10'
+                          : 'bg-[#1C222D] border-slate-700 text-slate-400 hover:border-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{w.icon}</span>
+                        <span className="text-xs font-semibold">{w.label}</span>
+                      </div>
+                      <div className={`w-4 h-4 rounded flex items-center justify-center transition-colors shrink-0 ml-1 ${
+                        isSelected ? 'bg-cyan-500 text-slate-950 font-bold' : 'border border-slate-600 bg-slate-800/60'
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

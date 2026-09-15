@@ -45,6 +45,7 @@ const DEFAULT_CONFIG: DiagnosisConfig = {
   psu: INITIAL_PSUS[7], // 850W 80 PLUS Gold (ATX 3.0)
   resolution: '1440p',
   workload: 'gaming',
+  workloads: ['gaming'],
   os: 'Windows 11'
 };
 

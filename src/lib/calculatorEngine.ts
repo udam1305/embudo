@@ -1,4 +1,4 @@
-import { DiagnosisConfig, BottleneckResult, MobileSoC, MobileDiagnosisResult } from '../types';
+import { DiagnosisConfig, BottleneckResult, MobileSoC, MobileDiagnosisResult, WorkloadType } from '../types';
 
 export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
   const { cpu, gpu, ram, storage, resolution, workload } = config;
@@ -26,20 +26,38 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
       break;
   }
 
-  // 2. Workload modifier
-  let effectiveCpuScore = cpu.gamingScore;
-  let effectiveGpuScore = resolution === '4k' ? gpu.score4k : (resolution === '1440p' || resolution === 'ultrawide') ? gpu.score1440p : gpu.score1080p;
+  // 2. Workload modifier (supports single or multiple selected workloads)
+  const activeWorkloads: WorkloadType[] = (config.workloads && config.workloads.length > 0)
+    ? config.workloads
+    : [workload || 'gaming'];
 
-  if (workload === 'render3d') {
-    effectiveCpuScore = (cpu.multicoreScore * 0.7) + (cpu.singlecoreScore * 0.3);
-    effectiveGpuScore = (gpu.score4k * 0.6) + (gpu.rayTracingScore * 0.4);
-  } else if (workload === 'streaming') {
-    effectiveCpuScore = (cpu.gamingScore * 0.65) + (cpu.multicoreScore * 0.35);
-  } else if (workload === 'video_edit') {
-    effectiveCpuScore = (cpu.multicoreScore * 0.8) + (cpu.singlecoreScore * 0.2);
-  } else if (workload === 'multitask') {
-    effectiveCpuScore = (cpu.multicoreScore * 0.6) + (cpu.gamingScore * 0.4);
-  }
+  const baseGpuScore = resolution === '4k' ? gpu.score4k : (resolution === '1440p' || resolution === 'ultrawide') ? gpu.score1440p : gpu.score1080p;
+
+  let totalCpuScore = 0;
+  let totalGpuScore = 0;
+
+  activeWorkloads.forEach(w => {
+    if (w === 'render3d') {
+      totalCpuScore += (cpu.multicoreScore * 0.7) + (cpu.singlecoreScore * 0.3);
+      totalGpuScore += (gpu.score4k * 0.6) + (gpu.rayTracingScore * 0.4);
+    } else if (w === 'streaming') {
+      totalCpuScore += (cpu.gamingScore * 0.65) + (cpu.multicoreScore * 0.35);
+      totalGpuScore += baseGpuScore;
+    } else if (w === 'video_edit') {
+      totalCpuScore += (cpu.multicoreScore * 0.8) + (cpu.singlecoreScore * 0.2);
+      totalGpuScore += (gpu.score1440p * 0.5) + (gpu.score4k * 0.5);
+    } else if (w === 'multitask') {
+      totalCpuScore += (cpu.multicoreScore * 0.6) + (cpu.gamingScore * 0.4);
+      totalGpuScore += baseGpuScore;
+    } else {
+      // gaming
+      totalCpuScore += cpu.gamingScore;
+      totalGpuScore += baseGpuScore;
+    }
+  });
+
+  const effectiveCpuScore = totalCpuScore / activeWorkloads.length;
+  const effectiveGpuScore = totalGpuScore / activeWorkloads.length;
 
   // 3. RAM Penalties
   let ramPenaltyPct = 0;
@@ -48,7 +66,7 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
   }
   if (ram.capacityGb < 16) {
     ramPenaltyPct += 18;
-  } else if (ram.capacityGb < 32 && (resolution === '4k' || workload === 'render3d' || workload === 'video_edit')) {
+  } else if (ram.capacityGb < 32 && (resolution === '4k' || activeWorkloads.some(w => w === 'render3d' || w === 'video_edit' || w === 'multitask'))) {
     ramPenaltyPct += 6;
   }
   if (ram.type === 'DDR4' && ram.speedMhz < 3200) {
