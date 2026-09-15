@@ -37,10 +37,10 @@ export const ExportCardModal: React.FC<ExportCardModalProps> = ({ config, result
 🎮 Tarjeta Gráfica: ${config.gpu.name}
 ⚡ Memoria RAM: ${config.ram.capacityGb}GB ${config.ram.type} @ ${config.ram.speedMhz}MHz (${config.ram.channels.toUpperCase()})
 💾 Almacenamiento: ${config.storage.type} (${config.storage.capacityGb}GB)
-🎯 Resolución objetivo: ${config.resolution.toUpperCase()} | Modo: ${config.workload.toUpperCase()}
+${config.psu ? `🔌 Tu Fuente (PSU): ${config.psu.name} (${config.psu.wattage}W - ${config.psu.efficiency})\n` : ''}🎯 Resolución objetivo: ${config.resolution.toUpperCase()} | Modo: ${config.workload.toUpperCase()}
 
 📉 Cuello de Botella: ${result.bottleneckPct}% (${result.limitingFactor})
-🔋 Consumo Estimado: ~${result.powerStats.systemEstimatedWatts}W | Fuente Recomendada: ${result.powerStats.recommendedPsuWatts}W
+🔋 Consumo Estimado: ~${result.powerStats.systemEstimatedWatts}W | Fuente Sugerida: ${result.powerStats.recommendedPsuWatts}W
 🎮 FPS Estimados:
 ${result.fpsEstimates.slice(0, 3).map(f => `  • ${f.game}: ${f.ultraFps} FPS Ultra (1% Low: ${f.onePercentLow} FPS)`).join('\n')}
 
@@ -107,8 +107,10 @@ Generado en: Embudo PC & Mobile Bottleneck Engine`;
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] text-slate-400 uppercase">Resolución & PSU</div>
-              <div className="text-xs font-bold text-slate-200">{config.resolution.toUpperCase()} • {result.powerStats.recommendedPsuWatts}W PSU</div>
+              <div className="text-[10px] text-slate-400 uppercase">Resolución & Fuente</div>
+              <div className="text-xs font-bold text-slate-200">
+                {config.resolution.toUpperCase()} • {config.psu ? `${config.psu.wattage}W (Tuya)` : `${result.powerStats.recommendedPsuWatts}W`}
+              </div>
             </div>
           </div>
 

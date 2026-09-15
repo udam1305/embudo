@@ -54,6 +54,14 @@ export interface Storage {
   readSpeedMb: number;
 }
 
+export interface PSU {
+  id: string;
+  name: string;
+  wattage: number;
+  efficiency: '80 PLUS White' | '80 PLUS Bronze' | '80 PLUS Silver' | '80 PLUS Gold' | '80 PLUS Platinum' | '80 PLUS Titanium' | 'Genérica';
+  tier?: string;
+}
+
 export interface MobileSoC {
   id: string;
   name: string;
@@ -75,6 +83,7 @@ export interface DiagnosisConfig {
   gpu: GPU;
   ram: RAM;
   storage: Storage;
+  psu?: PSU;
   resolution: ResolutionType;
   workload: WorkloadType;
   os: 'Windows 11' | 'Windows 10' | 'Linux' | 'macOS';
@@ -97,6 +106,14 @@ export interface BottleneckResult {
     peakSurgeWatts: number;
     recommendedPsuWatts: number;
     psuEfficiencyRating: string;
+    userPsuEvaluation?: {
+      wattage: number;
+      efficiency: string;
+      status: 'optimal' | 'sufficient' | 'tight' | 'insufficient';
+      message: string;
+      headroomWatts: number;
+      loadPercentage: number;
+    };
   };
   fpsEstimates: Array<{
     game: string;

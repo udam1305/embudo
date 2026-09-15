@@ -1,4 +1,4 @@
-import { CPU, GPU, RAM, Storage, MobileSoC, PrebuiltPC, AdminStats } from '../types';
+import { CPU, GPU, RAM, Storage, PSU, MobileSoC, PrebuiltPC, AdminStats } from '../types';
 
 export const INITIAL_CPUS: CPU[] = [
   {
@@ -416,6 +416,20 @@ export const INITIAL_STORAGES: Storage[] = [
   { id: 'stor-gen3-1tb', type: 'NVMe Gen3', capacityGb: 1000, readSpeedMb: 3500 },
   { id: 'stor-sata-1tb', type: 'SATA SSD', capacityGb: 1000, readSpeedMb: 550 },
   { id: 'stor-hdd-2tb', type: 'HDD', capacityGb: 2000, readSpeedMb: 160 }
+];
+
+export const INITIAL_PSUS: PSU[] = [
+  { id: 'psu-450w-generic', name: '450W Genérica / Básica', wattage: 450, efficiency: 'Genérica' },
+  { id: 'psu-500w-white', name: '500W 80 PLUS White', wattage: 500, efficiency: '80 PLUS White' },
+  { id: 'psu-550w-bronze', name: '550W 80 PLUS Bronze', wattage: 550, efficiency: '80 PLUS Bronze' },
+  { id: 'psu-600w-bronze', name: '600W 80 PLUS Bronze', wattage: 600, efficiency: '80 PLUS Bronze' },
+  { id: 'psu-650w-bronze', name: '650W 80 PLUS Bronze', wattage: 650, efficiency: '80 PLUS Bronze' },
+  { id: 'psu-700w-bronze', name: '700W 80 PLUS Bronze', wattage: 700, efficiency: '80 PLUS Bronze' },
+  { id: 'psu-750w-gold', name: '750W 80 PLUS Gold (Modular)', wattage: 750, efficiency: '80 PLUS Gold' },
+  { id: 'psu-850w-gold', name: '850W 80 PLUS Gold (ATX 3.0 / PCIe 5.0)', wattage: 850, efficiency: '80 PLUS Gold' },
+  { id: 'psu-1000w-gold', name: '1000W 80 PLUS Gold (ATX 3.0 / PCIe 5.0)', wattage: 1000, efficiency: '80 PLUS Gold' },
+  { id: 'psu-1200w-plat', name: '1200W 80 PLUS Platinum (ATX 3.0)', wattage: 1200, efficiency: '80 PLUS Platinum' },
+  { id: 'psu-1600w-titan', name: '1600W 80 PLUS Titanium (Ultra Enthusiast)', wattage: 1600, efficiency: '80 PLUS Titanium' }
 ];
 
 export const INITIAL_SOCS: MobileSoC[] = [

@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { CPU, GPU, RAM, Storage, MobileSoC, PrebuiltPC, DiagnosisConfig, BottleneckResult } from '../types';
+import { CPU, GPU, RAM, Storage, PSU, MobileSoC, PrebuiltPC, DiagnosisConfig, BottleneckResult } from '../types';
 import {
   INITIAL_CPUS,
   INITIAL_GPUS,
   INITIAL_RAMS,
   INITIAL_STORAGES,
+  INITIAL_PSUS,
   INITIAL_SOCS,
   INITIAL_PREBUILTS
 } from '../data/initialData';
@@ -15,6 +16,7 @@ interface HardwareContextType {
   gpus: GPU[];
   rams: RAM[];
   storages: Storage[];
+  psus: PSU[];
   socs: MobileSoC[];
   prebuilts: PrebuiltPC[];
   currentConfig: DiagnosisConfig;
@@ -40,6 +42,7 @@ const DEFAULT_CONFIG: DiagnosisConfig = {
   gpu: INITIAL_GPUS[0], // NVIDIA GeForce RTX 5070 Ti
   ram: INITIAL_RAMS[0], // 32GB DDR5 6000MHz Dual
   storage: INITIAL_STORAGES[1], // 2TB NVMe Gen4
+  psu: INITIAL_PSUS[7], // 850W 80 PLUS Gold (ATX 3.0)
   resolution: '1440p',
   workload: 'gaming',
   os: 'Windows 11'
@@ -50,6 +53,7 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [gpus, setGpus] = useState<GPU[]>(INITIAL_GPUS);
   const [rams] = useState<RAM[]>(INITIAL_RAMS);
   const [storages] = useState<Storage[]>(INITIAL_STORAGES);
+  const [psus, setPsus] = useState<PSU[]>(INITIAL_PSUS);
   const [socs, setSocs] = useState<MobileSoC[]>(INITIAL_SOCS);
   const [prebuilts, setPrebuilts] = useState<PrebuiltPC[]>(INITIAL_PREBUILTS);
 
@@ -254,6 +258,7 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         gpus,
         rams,
         storages,
+        psus,
         socs,
         prebuilts,
         currentConfig,

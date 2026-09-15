@@ -28,7 +28,7 @@ import { ExportCardModal } from '../components/ExportCardModal';
 import confetti from 'canvas-confetti';
 
 export const PcDiagnosisView: React.FC = () => {
-  const { cpus, gpus, rams, storages, currentConfig, currentResult, updateConfig } = useHardware();
+  const { cpus, gpus, rams, storages, psus, currentConfig, currentResult, updateConfig } = useHardware();
   const { saveDiagnosis, user } = useAuth();
 
   const [showExportModal, setShowExportModal] = useState(false);
@@ -281,6 +281,56 @@ export const PcDiagnosisView: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {/* Fuente de Poder (PSU) que tiene el usuario */}
+            <div className="pt-2 border-t border-slate-800/80">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-400" /> FUENTE DE PODER (TU FUENTE ACTUAL)
+                </label>
+                {currentConfig.psu && (
+                  <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded ${
+                    currentResult.powerStats.userPsuEvaluation?.status === 'optimal'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : currentResult.powerStats.userPsuEvaluation?.status === 'sufficient'
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                      : currentResult.powerStats.userPsuEvaluation?.status === 'tight'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                  }`}>
+                    {currentConfig.psu.wattage}W • {currentConfig.psu.efficiency}
+                  </span>
+                )}
+              </div>
+              <select
+                id="diag-select-psu"
+                value={currentConfig.psu?.id || ''}
+                onChange={(e) => {
+                  const found = psus.find(p => p.id === e.target.value);
+                  if (found) updateConfig({ psu: found });
+                }}
+                className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
+              >
+                {psus.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              {currentResult.powerStats.userPsuEvaluation && (
+                <p className={`mt-2 text-[11px] leading-relaxed ${
+                  currentResult.powerStats.userPsuEvaluation.status === 'optimal'
+                    ? 'text-emerald-400'
+                    : currentResult.powerStats.userPsuEvaluation.status === 'sufficient'
+                    ? 'text-cyan-400'
+                    : currentResult.powerStats.userPsuEvaluation.status === 'tight'
+                    ? 'text-amber-400'
+                    : 'text-rose-400'
+                }`}>
+                  {currentResult.powerStats.userPsuEvaluation.message}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Resolution & Workload Config */}
@@ -454,6 +504,81 @@ export const PcDiagnosisView: React.FC = () => {
                 <div className="text-[10px] text-cyan-300 font-mono">{currentResult.powerStats.psuEfficiencyRating}</div>
               </div>
             </div>
+
+            {/* Diagnóstico de la Fuente de Poder del Usuario */}
+            {currentResult.powerStats.userPsuEvaluation && (
+              <div className={`mt-4 p-4 rounded-xl border transition-all ${
+                currentResult.powerStats.userPsuEvaluation.status === 'optimal'
+                  ? 'bg-emerald-500/10 border-emerald-500/30'
+                  : currentResult.powerStats.userPsuEvaluation.status === 'sufficient'
+                  ? 'bg-cyan-500/10 border-cyan-500/30'
+                  : currentResult.powerStats.userPsuEvaluation.status === 'tight'
+                  ? 'bg-amber-500/10 border-amber-500/30'
+                  : 'bg-rose-500/10 border-rose-500/30'
+              }`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Zap className={`w-4 h-4 shrink-0 ${
+                      currentResult.powerStats.userPsuEvaluation.status === 'optimal'
+                        ? 'text-emerald-400'
+                        : currentResult.powerStats.userPsuEvaluation.status === 'sufficient'
+                        ? 'text-cyan-400'
+                        : currentResult.powerStats.userPsuEvaluation.status === 'tight'
+                        ? 'text-amber-400'
+                        : 'text-rose-400'
+                    }`} />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      Tu Fuente Seleccionada: {currentResult.powerStats.userPsuEvaluation.wattage}W ({currentResult.powerStats.userPsuEvaluation.efficiency})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 font-mono text-xs">
+                    <span className={`px-2 py-0.5 rounded font-bold ${
+                      currentResult.powerStats.userPsuEvaluation.status === 'optimal'
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : currentResult.powerStats.userPsuEvaluation.status === 'sufficient'
+                        ? 'bg-cyan-500/20 text-cyan-300'
+                        : currentResult.powerStats.userPsuEvaluation.status === 'tight'
+                        ? 'bg-amber-500/20 text-amber-300'
+                        : 'bg-rose-500/20 text-rose-300'
+                    }`}>
+                      {currentResult.powerStats.userPsuEvaluation.status === 'optimal' ? 'Óptima (Eficiente)'
+                        : currentResult.powerStats.userPsuEvaluation.status === 'sufficient' ? 'Suficiente'
+                        : currentResult.powerStats.userPsuEvaluation.status === 'tight' ? 'Al Límite en Picos'
+                        : 'Insuficiente (Riesgo)'}
+                    </span>
+                    <span className="text-slate-400">
+                      {currentResult.powerStats.userPsuEvaluation.loadPercentage}% Carga
+                    </span>
+                  </div>
+                </div>
+
+                {/* Barra de progreso de carga de la fuente */}
+                <div className="w-full bg-[#1C222D] rounded-full h-2 mb-2 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      currentResult.powerStats.userPsuEvaluation.status === 'optimal'
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                        : currentResult.powerStats.userPsuEvaluation.status === 'sufficient'
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-500'
+                        : currentResult.powerStats.userPsuEvaluation.status === 'tight'
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                        : 'bg-gradient-to-r from-rose-500 to-red-600'
+                    }`}
+                    style={{ width: `${Math.min(100, currentResult.powerStats.userPsuEvaluation.loadPercentage)}%` }}
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-300 gap-1">
+                  <span>{currentResult.powerStats.userPsuEvaluation.message}</span>
+                  <span className="shrink-0 font-mono text-slate-400">
+                    {currentResult.powerStats.userPsuEvaluation.headroomWatts >= 0
+                      ? `Margen libre: +${currentResult.powerStats.userPsuEvaluation.headroomWatts}W`
+                      : `Déficit continuo: ${currentResult.powerStats.userPsuEvaluation.headroomWatts}W`}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* FPS & Graphics Estimator Table */}

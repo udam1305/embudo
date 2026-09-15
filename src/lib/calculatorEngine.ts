@@ -126,6 +126,40 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
   const recommendedPsuWatts = Math.max(gpu.recommendedPsu, roundedPsu);
   const psuEfficiencyRating = recommendedPsuWatts >= 850 ? '80 PLUS Gold / Platinum (ATX 3.0 / PCIe 5.0 12V-2x6)' : '80 PLUS Gold (750W+)';
 
+  // User PSU Evaluation
+  const userPsu = config.psu;
+  let userPsuEvaluation: BottleneckResult['powerStats']['userPsuEvaluation'] = undefined;
+
+  if (userPsu) {
+    const headroomWatts = userPsu.wattage - systemEstimatedWatts;
+    const loadPercentage = Math.min(150, Math.round((systemEstimatedWatts / userPsu.wattage) * 100));
+    let status: 'optimal' | 'sufficient' | 'tight' | 'insufficient' = 'sufficient';
+    let message = '';
+
+    if (userPsu.wattage < systemEstimatedWatts) {
+      status = 'insufficient';
+      message = `⚠️ Tu fuente de ${userPsu.wattage}W es insuficiente. El ensamble demanda ~${systemEstimatedWatts}W continuos (pico de ${peakSurgeWatts}W). Provocará apagados de seguridad (OCP/OPP).`;
+    } else if (userPsu.wattage < peakSurgeWatts) {
+      status = 'tight';
+      message = `⚠️ Tu fuente de ${userPsu.wattage}W soporta el uso continuo (${loadPercentage}% de carga), pero está al límite ante picos transitorios de ${peakSurgeWatts}W.`;
+    } else if (userPsu.wattage >= recommendedPsuWatts) {
+      status = 'optimal';
+      message = `✅ Tu fuente de ${userPsu.wattage}W es óptima (${loadPercentage}% de carga). Permite operar en la curva ideal de eficiencia y absorbe picos transitorios con total holgura.`;
+    } else {
+      status = 'sufficient';
+      message = `✔️ Tu fuente de ${userPsu.wattage}W es suficiente para el consumo continuo (~${systemEstimatedWatts}W) con un margen adecuado.`;
+    }
+
+    userPsuEvaluation = {
+      wattage: userPsu.wattage,
+      efficiency: userPsu.efficiency,
+      status,
+      message,
+      headroomWatts,
+      loadPercentage
+    };
+  }
+
   // 5. FPS Estimates in Top Games
   // Base GPU performance factor
   const gpuBaseFps = (gpu.score1440p * 1.45) * (resolution === '1080p' ? 1.40 : resolution === '1440p' ? 1.0 : resolution === 'ultrawide' ? 0.85 : 0.62);
@@ -219,7 +253,15 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
     });
   }
 
-  if (systemEstimatedWatts > gpu.recommendedPsu * 0.85) {
+  if (userPsu && userPsu.wattage < peakSurgeWatts) {
+    upgradeRecommendations.unshift({
+      priority: 1,
+      componentType: 'Fuente',
+      suggestedItem: `Fuente ${recommendedPsuWatts}W 80 PLUS Gold (ATX 3.0 / PCIe 5.0)`,
+      gainPercentage: 0,
+      reason: `Tu fuente actual (${userPsu.wattage}W) está por debajo del pico transitorio de ${peakSurgeWatts}W. Requiere actualización prioritaria para evitar reinicios o apagados súbitos.`
+    });
+  } else if (!userPsu && systemEstimatedWatts > gpu.recommendedPsu * 0.85) {
     upgradeRecommendations.push({
       priority: 4,
       componentType: 'Fuente',
@@ -245,7 +287,8 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
       systemEstimatedWatts,
       peakSurgeWatts,
       recommendedPsuWatts,
-      psuEfficiencyRating
+      psuEfficiencyRating,
+      userPsuEvaluation
     },
     fpsEstimates,
     driverAdvice,
