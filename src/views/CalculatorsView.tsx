@@ -4,7 +4,7 @@ import { useHardware } from '../context/HardwareContext';
 import { calculateElectricityCost } from '../lib/calculatorEngine';
 
 export const CalculatorsView: React.FC = () => {
-  const { cpus, gpus, currentConfig, updateConfig, currentResult } = useHardware();
+  const { cpus, gpus, psus, currentConfig, updateConfig, currentResult } = useHardware();
   const [activeSubTab, setActiveSubTab] = useState<'bottleneck' | 'watts' | 'electricity'>('watts');
 
   // Electricity calculator state
@@ -203,9 +203,50 @@ export const CalculatorsView: React.FC = () => {
                   <strong className="text-emerald-400">80 PLUS Gold / ATX 3.1</strong>
                 </div>
               </div>
+
+              {/* Recommended Flagship PSUs (Corsair, Seasonic, ASUS) */}
+              <div className="mt-5 pt-4 border-t border-slate-800">
+                <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2.5 flex items-center justify-between">
+                  <span>Fuentes Recomendadas ({calculatedPsuSizing}W+)</span>
+                  <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">⚡ Corsair & Flagships</span>
+                </div>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {psus
+                    .filter(p => p.wattage >= calculatedPsuSizing)
+                    .sort((a, b) => (a.brand === 'Corsair' ? -1 : 1))
+                    .slice(0, 4)
+                    .map(p => (
+                      <div key={p.id} className="p-2.5 bg-[#1C222D] rounded-xl border border-slate-700/80 flex items-center justify-between text-xs hover:border-slate-600 transition-colors">
+                        <div className="truncate mr-2">
+                          <div className="font-bold text-white truncate flex items-center gap-1.5">
+                            {p.brand === 'Corsair' && (
+                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-black tracking-wider">
+                                CORSAIR
+                              </span>
+                            )}
+                            <span className="truncate">{p.name}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            {p.wattage}W • {p.efficiency} {p.atx3 ? '• ATX 3.1' : ''} {p.tier ? `• ${p.tier}` : ''}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => updateConfig({ psu: p })}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 transition-all cursor-pointer ${
+                            currentConfig.psu?.id === p.id
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/30'
+                          }`}
+                        >
+                          {currentConfig.psu?.id === p.id ? 'Equipada' : 'Equipar'}
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              </div>
             </div>
 
-            <div className="mt-6 p-3.5 rounded-xl bg-[#1C222D] border border-slate-700 text-[11px] text-slate-400 flex items-start gap-2.5">
+            <div className="mt-5 p-3.5 rounded-xl bg-[#1C222D] border border-slate-700 text-[11px] text-slate-400 flex items-start gap-2.5">
               <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
               <span>Para GPUs de la serie RTX 50 y RTX 40, asegúrate de que la fuente incluya cable nativo 12V-2x6 / 12VHPWR.</span>
             </div>

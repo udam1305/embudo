@@ -1,38 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Scale, Cpu, Monitor, Zap, Gauge, Gamepad2, ArrowRight, CheckCircle2, TrendingUp } from 'lucide-react';
 import { useHardware } from '../context/HardwareContext';
 import { calculateBottleneck } from '../lib/calculatorEngine';
 import { DiagnosisConfig } from '../types';
+import { groupCpusByGeneration, getCpuGenerationMeta } from '../utils/cpuGenerations';
+import { groupGpusByGeneration, getGpuGenerationMeta } from '../utils/gpuGenerations';
 
 export const PcComparatorView: React.FC = () => {
   const { cpus, gpus, rams, storages } = useHardware();
 
+  const cpuGroups = useMemo(() => groupCpusByGeneration(cpus), [cpus]);
+  const gpuGroups = useMemo(() => groupGpusByGeneration(gpus), [gpus]);
+
   // Setup A (Default: 7800X3D + RTX 5070 Ti)
-  const [setupA, setSetupA] = useState<DiagnosisConfig>({
-    cpu: cpus[0] || cpus.find(c => c.id === 'cpu-7800x3d')!,
-    gpu: gpus[0] || gpus.find(g => g.id === 'gpu-5070ti')!,
+  const [setupA, setSetupA] = useState<DiagnosisConfig>(() => ({
+    cpu: cpus.find(c => c.id === 'cpu-7800x3d') || cpus[0],
+    gpu: gpus.find(g => g.id === 'gpu-5070ti') || gpus[0],
     ram: rams[0],
     storage: storages[1],
     resolution: '1440p',
     workload: 'gaming',
     os: 'Windows 11'
-  });
+  }));
 
   // Setup B (Alternative: Core i7-14700K + RTX 4070 Ti Super)
-  const [setupB, setSetupB] = useState<DiagnosisConfig>({
-    cpu: cpus.find(c => c.id === 'cpu-14700k') || cpus[1],
-    gpu: gpus.find(g => g.id === 'gpu-4070ts') || gpus[2],
+  const [setupB, setSetupB] = useState<DiagnosisConfig>(() => ({
+    cpu: cpus.find(c => c.id === 'cpu-14700k') || cpus[1] || cpus[0],
+    gpu: gpus.find(g => g.id === 'gpu-4070ts') || gpus[2] || gpus[0],
     ram: rams[0],
     storage: storages[1],
     resolution: '1440p',
     workload: 'gaming',
     os: 'Windows 11'
-  });
+  }));
 
   const [resolution, setResolution] = useState<'1080p' | '1440p' | '4k'>('1440p');
 
   const resultA = calculateBottleneck({ ...setupA, resolution });
   const resultB = calculateBottleneck({ ...setupB, resolution });
+
+  const cpuMetaA = useMemo(() => getCpuGenerationMeta(setupA.cpu), [setupA.cpu]);
+  const cpuMetaB = useMemo(() => getCpuGenerationMeta(setupB.cpu), [setupB.cpu]);
+  const gpuMetaA = useMemo(() => getGpuGenerationMeta(setupA.gpu), [setupA.gpu]);
+  const gpuMetaB = useMemo(() => getGpuGenerationMeta(setupB.gpu), [setupB.gpu]);
 
   return (
     <div className="space-y-8 pb-16 max-w-7xl mx-auto px-4 sm:px-6">
@@ -49,9 +59,9 @@ export const PcComparatorView: React.FC = () => {
         </p>
 
         {/* Global Resolution switch */}
-        <div className="flex items-center gap-2 mt-4">
+        <div className="flex flex-wrap items-center gap-2 mt-4">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Resolución de prueba:</span>
-          {(['1080p', '1440p', '4k'] as const).map(res => (
+          {(['1080p', '1440p', 'ultrawide', '4k', '8k'] as const).map(res => (
             <button
               key={res}
               id={`comparator-res-${res}`}
@@ -62,7 +72,7 @@ export const PcComparatorView: React.FC = () => {
                   : 'bg-[#151921] text-slate-400 hover:text-slate-200 border border-slate-800'
               }`}
             >
-              {res}
+              {res === '8k' ? '8K Ultra HD' : res === 'ultrawide' ? 'Ultrawide 21:9' : res}
             </button>
           ))}
         </div>
@@ -78,6 +88,15 @@ export const PcComparatorView: React.FC = () => {
                 CONFIGURACIÓN A
               </span>
               <h3 className="text-base font-bold text-white mt-2">{setupA.cpu.name}</h3>
+              <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                <span className="px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 font-bold border border-cyan-500/30 text-[10px]">
+                  {cpuMetaA.shortLabel}
+                </span>
+                <span>•</span>
+                <span className="font-mono text-slate-300">{setupA.cpu.socket}</span>
+                <span>•</span>
+                <span className="font-mono text-slate-300">{setupA.cpu.releaseYear}</span>
+              </div>
             </div>
             <div className="text-right">
               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Cuello de Botella</div>
@@ -97,21 +116,40 @@ export const PcComparatorView: React.FC = () => {
                 }}
                 className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer mt-1 focus:outline-none focus:border-cyan-500"
               >
-                {cpus.map(c => <option key={c.id} value={c.id}>{c.name} ({c.cores} Cores)</option>)}
+                {cpuGroups.map(group => (
+                  <optgroup key={group.id} label={`─── ${group.label.toUpperCase()} ───`}>
+                    {group.cpus.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.cores}C/{c.threads}T • {c.socket})
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GRÁFICA A</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GRÁFICA A</label>
+                <span className="text-[10px] font-bold text-cyan-400 font-mono">{gpuMetaA.shortLabel}</span>
+              </div>
               <select
                 value={setupA.gpu.id}
                 onChange={(e) => {
                   const found = gpus.find(g => g.id === e.target.value);
                   if (found) setSetupA(prev => ({ ...prev, gpu: found }));
                 }}
-                className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer mt-1 focus:outline-none focus:border-cyan-500"
+                className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer focus:outline-none focus:border-cyan-500"
               >
-                {gpus.map(g => <option key={g.id} value={g.id}>{g.name} ({g.vram}GB)</option>)}
+                {gpuGroups.map(group => (
+                  <optgroup key={group.id} label={`─── ${group.label.toUpperCase()} ───`}>
+                    {group.gpus.map(g => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} ({g.vram}GB {g.vramType} • {g.tdp}W)
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
           </div>
@@ -131,6 +169,14 @@ export const PcComparatorView: React.FC = () => {
               <div className="font-black text-cyan-400 mt-1">{resultA.fpsEstimates[0]?.ultraFps} FPS</div>
             </div>
           </div>
+
+          <div className="p-2.5 bg-[#1C222D] rounded-xl border border-slate-800 text-[11px] flex items-center justify-between">
+            <span className="text-slate-400">Recomendación PSU:</span>
+            <span className="font-bold text-amber-400 flex items-center gap-1 font-mono">
+              <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">CORSAIR</span>
+              {resultA.powerStats.recommendedPsuWatts >= 1200 ? 'AX1600i / RM1200x' : resultA.powerStats.recommendedPsuWatts >= 1000 ? 'RM1000x SHIFT' : resultA.powerStats.recommendedPsuWatts >= 850 ? 'RM850x SHIFT' : 'RM750x SHIFT'}
+            </span>
+          </div>
         </div>
 
         {/* Setup B */}
@@ -141,6 +187,15 @@ export const PcComparatorView: React.FC = () => {
                 CONFIGURACIÓN B
               </span>
               <h3 className="text-base font-bold text-white mt-2">{setupB.cpu.name}</h3>
+              <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 font-bold border border-blue-500/30 text-[10px]">
+                  {cpuMetaB.shortLabel}
+                </span>
+                <span>•</span>
+                <span className="font-mono text-slate-300">{setupB.cpu.socket}</span>
+                <span>•</span>
+                <span className="font-mono text-slate-300">{setupB.cpu.releaseYear}</span>
+              </div>
             </div>
             <div className="text-right">
               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Cuello de Botella</div>
@@ -160,21 +215,40 @@ export const PcComparatorView: React.FC = () => {
                 }}
                 className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer mt-1 focus:outline-none focus:border-cyan-500"
               >
-                {cpus.map(c => <option key={c.id} value={c.id}>{c.name} ({c.cores} Cores)</option>)}
+                {cpuGroups.map(group => (
+                  <optgroup key={group.id} label={`─── ${group.label.toUpperCase()} ───`}>
+                    {group.cpus.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.cores}C/{c.threads}T • {c.socket})
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GRÁFICA B</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GRÁFICA B</label>
+                <span className="text-[10px] font-bold text-blue-400 font-mono">{gpuMetaB.shortLabel}</span>
+              </div>
               <select
                 value={setupB.gpu.id}
                 onChange={(e) => {
                   const found = gpus.find(g => g.id === e.target.value);
                   if (found) setSetupB(prev => ({ ...prev, gpu: found }));
                 }}
-                className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer mt-1 focus:outline-none focus:border-cyan-500"
+                className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer focus:outline-none focus:border-cyan-500"
               >
-                {gpus.map(g => <option key={g.id} value={g.id}>{g.name} ({g.vram}GB)</option>)}
+                {gpuGroups.map(group => (
+                  <optgroup key={group.id} label={`─── ${group.label.toUpperCase()} ───`}>
+                    {group.gpus.map(g => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} ({g.vram}GB {g.vramType} • {g.tdp}W)
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
           </div>
@@ -193,6 +267,14 @@ export const PcComparatorView: React.FC = () => {
               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">FPS Ultra</div>
               <div className="font-black text-blue-400 mt-1">{resultB.fpsEstimates[0]?.ultraFps} FPS</div>
             </div>
+          </div>
+
+          <div className="p-2.5 bg-[#1C222D] rounded-xl border border-slate-800 text-[11px] flex items-center justify-between">
+            <span className="text-slate-400">Recomendación PSU:</span>
+            <span className="font-bold text-amber-400 flex items-center gap-1 font-mono">
+              <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">CORSAIR</span>
+              {resultB.powerStats.recommendedPsuWatts >= 1200 ? 'AX1600i / RM1200x' : resultB.powerStats.recommendedPsuWatts >= 1000 ? 'RM1000x SHIFT' : resultB.powerStats.recommendedPsuWatts >= 850 ? 'RM850x SHIFT' : 'RM750x SHIFT'}
+            </span>
           </div>
         </div>
       </div>

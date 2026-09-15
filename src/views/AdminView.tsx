@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Shield,
   Lock,
@@ -15,21 +15,85 @@ import {
   Activity,
   Layers,
   Database,
-  ExternalLink
+  ExternalLink,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useHardware } from '../context/HardwareContext';
-import { CPU, GPU, MobileSoC, AdminStats } from '../types';
+import { CPU, GPU, MobileSoC, PSU, AdminStats } from '../types';
 import { INITIAL_ADMIN_STATS } from '../data/initialData';
+import { groupCpusByGeneration, getCpuGenerationMeta, KNOWN_CPU_GENERATIONS } from '../utils/cpuGenerations';
+import { groupGpusByGeneration, getGpuGenerationMeta, KNOWN_GPU_GENERATIONS } from '../utils/gpuGenerations';
 
 export const AdminView: React.FC = () => {
   const { isAdmin, loginAsAdmin, logoutAdmin } = useAuth();
-  const { cpus, gpus, socs, addOrUpdateCpu, deleteCpu, addOrUpdateGpu, deleteGpu, addOrUpdateSoc, deleteSoc } = useHardware();
+  const {
+    cpus,
+    gpus,
+    socs,
+    psus,
+    addOrUpdateCpu,
+    deleteCpu,
+    addOrUpdateGpu,
+    deleteGpu,
+    addOrUpdateSoc,
+    deleteSoc,
+    addOrUpdatePsu,
+    deletePsu
+  } = useHardware();
 
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState(false);
   const [stats, setStats] = useState<AdminStats>(INITIAL_ADMIN_STATS);
-  const [activeTab, setActiveTab] = useState<'stats' | 'cpus' | 'gpus' | 'socs'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'cpus' | 'gpus' | 'socs' | 'psus'>('stats');
+
+  // Filter states for CPU admin list
+  const [adminCpuFilterBrand, setAdminCpuFilterBrand] = useState<'All' | 'AMD' | 'Intel'>('All');
+  const [adminCpuFilterGen, setAdminCpuFilterGen] = useState<string>('All');
+
+  const availableAdminCpuGens = useMemo(() => {
+    return KNOWN_CPU_GENERATIONS.filter(g => {
+      if (adminCpuFilterBrand === 'All') return true;
+      return g.brand === adminCpuFilterBrand;
+    });
+  }, [adminCpuFilterBrand]);
+
+  const filteredAdminCpus = useMemo(() => {
+    return cpus.filter(c => {
+      const matchBrand = adminCpuFilterBrand === 'All' || c.brand === adminCpuFilterBrand;
+      const genMeta = getCpuGenerationMeta(c);
+      const matchGen = adminCpuFilterGen === 'All' || genMeta.id === adminCpuFilterGen;
+      return matchBrand && matchGen;
+    });
+  }, [cpus, adminCpuFilterBrand, adminCpuFilterGen]);
+
+  const adminCpuGroups = useMemo(() => {
+    return groupCpusByGeneration(filteredAdminCpus);
+  }, [filteredAdminCpus]);
+
+  // Filter states for GPU admin list
+  const [adminGpuFilterBrand, setAdminGpuFilterBrand] = useState<'All' | 'NVIDIA' | 'AMD'>('All');
+  const [adminGpuFilterGen, setAdminGpuFilterGen] = useState<string>('All');
+
+  const availableAdminGpuGens = useMemo(() => {
+    return KNOWN_GPU_GENERATIONS.filter(g => {
+      if (adminGpuFilterBrand === 'All') return true;
+      return g.brand === adminGpuFilterBrand;
+    });
+  }, [adminGpuFilterBrand]);
+
+  const filteredAdminGpus = useMemo(() => {
+    return gpus.filter(g => {
+      const matchBrand = adminGpuFilterBrand === 'All' || g.brand === adminGpuFilterBrand;
+      const genMeta = getGpuGenerationMeta(g);
+      const matchGen = adminGpuFilterGen === 'All' || genMeta.id === adminGpuFilterGen;
+      return matchBrand && matchGen;
+    });
+  }, [gpus, adminGpuFilterBrand, adminGpuFilterGen]);
+
+  const adminGpuGroups = useMemo(() => {
+    return groupGpusByGeneration(filteredAdminGpus);
+  }, [filteredAdminGpus]);
 
   // Form states for adding/editing CPU
   const [showCpuModal, setShowCpuModal] = useState(false);
@@ -186,6 +250,47 @@ export const AdminView: React.FC = () => {
     setTimeout(() => setActionSuccess(null), 3000);
   };
 
+  // Filter and modal states for PSU
+  const [adminPsuFilterBrand, setAdminPsuFilterBrand] = useState<string>('All');
+  const [showPsuModal, setShowPsuModal] = useState(false);
+  const [editingPsu, setEditingPsu] = useState<Partial<PSU>>({
+    name: '',
+    brand: 'Corsair',
+    wattage: 850,
+    efficiency: '80 PLUS Gold',
+    tier: 'Tier A',
+    modular: 'Totalmente Modular',
+    atx3: true
+  });
+
+  const filteredAdminPsus = useMemo(() => {
+    return psus.filter(p => {
+      if (adminPsuFilterBrand === 'All') return true;
+      if (adminPsuFilterBrand === 'Corsair') return p.brand === 'Corsair';
+      if (adminPsuFilterBrand === 'Genérica') return !p.brand || p.brand === 'Genérica';
+      return p.brand === adminPsuFilterBrand;
+    });
+  }, [psus, adminPsuFilterBrand]);
+
+  const handleSavePsu = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPsu.name) return;
+    const psu: PSU = {
+      id: editingPsu.id || `psu-${Date.now()}`,
+      name: editingPsu.name!,
+      brand: editingPsu.brand || 'Corsair',
+      wattage: Number(editingPsu.wattage) || 850,
+      efficiency: (editingPsu.efficiency as any) || '80 PLUS Gold',
+      tier: editingPsu.tier || 'Tier A',
+      modular: (editingPsu.modular as any) || 'Totalmente Modular',
+      atx3: Boolean(editingPsu.atx3)
+    };
+    await addOrUpdatePsu(psu);
+    setShowPsuModal(false);
+    setActionSuccess('Fuente de poder guardada exitosamente');
+    setTimeout(() => setActionSuccess(null), 3000);
+  };
+
   // If not logged in as Admin, show high-security Login screen
   if (!isAdmin) {
     return (
@@ -279,7 +384,8 @@ export const AdminView: React.FC = () => {
           { id: 'stats', label: 'Estadísticas & Métricas', icon: BarChart3 },
           { id: 'cpus', label: `Procesadores (${cpus.length})`, icon: Cpu },
           { id: 'gpus', label: `Tarjetas Gráficas (${gpus.length})`, icon: Monitor },
-          { id: 'socs', label: `SoCs Móviles (${socs.length})`, icon: Smartphone }
+          { id: 'socs', label: `SoCs Móviles (${socs.length})`, icon: Smartphone },
+          { id: 'psus', label: `Fuentes de Poder (${psus.length})`, icon: Zap }
         ].map(t => {
           const Icon = t.icon;
           return (
@@ -381,9 +487,12 @@ export const AdminView: React.FC = () => {
 
       {/* TAB 2: CPUS CRUD */}
       {activeTab === 'cpus' && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-base font-bold text-white">Catálogo de Procesadores</h3>
+        <div className="space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold text-white">Catálogo de Procesadores (Ordenados por Generación)</h3>
+              <p className="text-xs text-slate-400">Total de {filteredAdminCpus.length} procesadores mostrados por arquitectura y generación cronológica.</p>
+            </div>
             <button
               onClick={() => {
                 setEditingCpu({
@@ -403,47 +512,105 @@ export const AdminView: React.FC = () => {
                 });
                 setShowCpuModal(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold cursor-pointer transition-all shadow-md self-start sm:self-auto"
             >
               <Plus className="w-4 h-4" /> Agregar Nuevo CPU
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cpus.map(c => (
-              <div key={c.id} className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-3">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400">
-                      {c.brand} ({c.socket})
-                    </span>
-                    <span className="text-xs text-slate-400 font-mono">{c.tdp}W TDP</span>
-                  </div>
-                  <h4 className="text-sm font-bold text-white mt-2">{c.name}</h4>
-                  <div className="text-xs text-slate-400 mt-1">
-                    {c.cores} Cores / {c.threads} Threads • Boost {c.boostClock} GHz
-                  </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">
-                    Gaming: {c.gamingScore}/100 • Multi: {c.multicoreScore}/100
-                  </div>
+          {/* Filters for Admin CPU list */}
+          <div className="flex flex-wrap items-center gap-3 p-3 bg-slate-900/90 rounded-2xl border border-slate-800">
+            <div className="flex items-center gap-1">
+              {(['All', 'AMD', 'Intel'] as const).map(b => (
+                <button
+                  key={b}
+                  onClick={() => {
+                    setAdminCpuFilterBrand(b);
+                    setAdminCpuFilterGen('All');
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    adminCpuFilterBrand === b
+                      ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200 bg-slate-800/60'
+                  }`}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+
+            <select
+              value={adminCpuFilterGen}
+              onChange={(e) => setAdminCpuFilterGen(e.target.value)}
+              className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer"
+            >
+              <option value="All">⚡ Todas las Generaciones ({filteredAdminCpus.length})</option>
+              {availableAdminCpuGens.map(g => (
+                <option key={g.id} value={g.id}>
+                  {g.shortLabel}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Grouped CPU Sections */}
+          <div className="space-y-6">
+            {adminCpuGroups.map(group => (
+              <div key={group.id} className="space-y-3">
+                <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
+                  <span className="text-xs font-black tracking-wider uppercase text-cyan-400">
+                    {group.label}
+                  </span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
+                    {group.cpus.length} modelos
+                  </span>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-                  <button
-                    onClick={() => {
-                      setEditingCpu(c);
-                      setShowCpuModal(true);
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-cyan-400 cursor-pointer"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => deleteCpu(c.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-400 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {group.cpus.map(c => {
+                    const meta = getCpuGenerationMeta(c);
+                    return (
+                      <div key={c.id} className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-3 hover:border-slate-700 transition-all">
+                        <div>
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                              {meta.shortLabel}
+                            </span>
+                            <span className="text-xs text-slate-400 font-mono">{c.tdp}W TDP • {c.socket}</span>
+                          </div>
+                          <h4 className="text-sm font-bold text-white mt-2">{c.name}</h4>
+                          <div className="text-xs text-slate-400 mt-1 font-mono">
+                            {c.cores}C / {c.threads}T • Base {c.baseClock}G • Boost {c.boostClock}G
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+                            <span>Gaming: <strong className="text-cyan-400">{c.gamingScore}/100</strong></span>
+                            <span>Año: <strong className="text-slate-300">{c.releaseYear}</strong></span>
+                            <span>PCIe: <strong className="text-slate-300">{c.pcieGen}.0</strong></span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                          <button
+                            onClick={() => {
+                              setEditingCpu(c);
+                              setShowCpuModal(true);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-cyan-400 cursor-pointer"
+                            title="Editar CPU"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteCpu(c.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-400 cursor-pointer"
+                            title="Eliminar CPU"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -454,8 +621,11 @@ export const AdminView: React.FC = () => {
       {/* TAB 3: GPUS CRUD */}
       {activeTab === 'gpus' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-base font-bold text-white">Catálogo de Tarjetas Gráficas</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold text-white">Catálogo de Tarjetas Gráficas</h3>
+              <p className="text-xs text-slate-400">Total registradas: {gpus.length} GPUs (Mostrando: {filteredAdminGpus.length})</p>
+            </div>
             <button
               onClick={() => {
                 setEditingGpu({
@@ -474,44 +644,111 @@ export const AdminView: React.FC = () => {
                 });
                 setShowGpuModal(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer transition-all self-start sm:self-auto"
             >
               <Plus className="w-4 h-4" /> Agregar Nueva GPU
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {gpus.map(g => (
-              <div key={g.id} className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-3">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400">
-                      {g.brand}
-                    </span>
-                    <span className="text-xs text-slate-400 font-mono">{g.tdp}W ({g.recommendedPsu}W PSU)</span>
-                  </div>
-                  <h4 className="text-sm font-bold text-white mt-2">{g.name}</h4>
-                  <div className="text-xs text-slate-400 mt-1">
-                    {g.vram}GB {g.vramType} • 1440p: {g.score1440p}/100 • 4K: {g.score4k}/100
-                  </div>
+          {/* GPU Filters */}
+          <div className="flex flex-wrap items-center gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
+            <div className="flex items-center gap-1">
+              {(['All', 'NVIDIA', 'AMD'] as const).map(b => (
+                <button
+                  key={b}
+                  onClick={() => {
+                    setAdminGpuFilterBrand(b);
+                    setAdminGpuFilterGen('All');
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    adminGpuFilterBrand === b
+                      ? 'bg-indigo-500 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200 bg-slate-800/60'
+                  }`}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+
+            <select
+              value={adminGpuFilterGen}
+              onChange={(e) => setAdminGpuFilterGen(e.target.value)}
+              className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
+            >
+              <option value="All">⚡ Todas las Familias ({filteredAdminGpus.length})</option>
+              {availableAdminGpuGens.map(g => (
+                <option key={g.id} value={g.id}>
+                  {g.shortLabel}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Grouped GPU Sections */}
+          <div className="space-y-6">
+            {adminGpuGroups.map(group => (
+              <div key={group.id} className="space-y-3">
+                <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
+                  <span className="text-xs font-black tracking-wider uppercase text-indigo-400">
+                    {group.label}
+                  </span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
+                    {group.gpus.length} modelos
+                  </span>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-                  <button
-                    onClick={() => {
-                      setEditingGpu(g);
-                      setShowGpuModal(true);
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-indigo-400 cursor-pointer"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => deleteGpu(g.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-400 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {group.gpus.map(g => {
+                    const meta = getGpuGenerationMeta(g);
+                    return (
+                      <div key={g.id} className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-3 hover:border-slate-700 transition-all">
+                        <div>
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                              {meta.shortLabel}
+                            </span>
+                            <span className="text-xs text-slate-400 font-mono">{g.tdp}W • {g.recommendedPsu}W PSU</span>
+                          </div>
+                          <h4 className="text-sm font-bold text-white mt-2">{g.name}</h4>
+                          <div className="text-xs text-slate-400 mt-1 font-mono">
+                            {g.vram}GB {g.vramType} • RayTracing: {g.rayTracingScore}/100
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+                            <span>1080p: <strong className="text-emerald-400">{g.score1080p}</strong></span>
+                            <span>1440p: <strong className="text-cyan-400">{g.score1440p}</strong></span>
+                            <span>4K: <strong className="text-blue-400">{g.score4k}</strong></span>
+                            <span>Año: <strong className="text-slate-300">{g.releaseYear}</strong></span>
+                          </div>
+                          {g.dlssFsrSupport && (
+                            <div className="text-[10px] text-indigo-300 mt-1.5 font-mono">
+                              Tecnología: {g.dlssFsrSupport}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                          <button
+                            onClick={() => {
+                              setEditingGpu(g);
+                              setShowGpuModal(true);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-indigo-400 cursor-pointer"
+                            title="Editar GPU"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteGpu(g.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-400 cursor-pointer"
+                            title="Eliminar GPU"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -577,6 +814,149 @@ export const AdminView: React.FC = () => {
                   <button
                     onClick={() => deleteSoc(s.id)}
                     className="p-1.5 text-slate-400 hover:text-rose-400 cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: PSUS CRUD */}
+      {activeTab === 'psus' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Zap className="w-5 h-5 text-amber-400" />
+                Catálogo de Fuentes de Poder (PSUs)
+              </h3>
+              <p className="text-xs text-slate-400">
+                Gestión de fuentes de alto rendimiento Corsair (Shift, HX, AX), ROG Thor, Seasonic y referencias.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setEditingPsu({
+                  name: '',
+                  brand: 'Corsair',
+                  wattage: 1000,
+                  efficiency: '80 PLUS Gold',
+                  tier: 'Tier A (Shift Side-Cable)',
+                  modular: 'Totalmente Modular',
+                  atx3: true
+                });
+                setShowPsuModal(true);
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black cursor-pointer transition-all shadow-md"
+            >
+              <Plus className="w-4 h-4" /> Agregar Nueva Fuente
+            </button>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 bg-slate-900/80 rounded-xl border border-slate-800">
+              <div className="text-[10px] text-slate-400 uppercase font-semibold">Total Fuentes</div>
+              <div className="text-xl font-black text-white mt-0.5">{psus.length}</div>
+            </div>
+            <div className="p-3.5 bg-slate-900/80 rounded-xl border border-amber-500/30">
+              <div className="text-[10px] text-amber-400 uppercase font-semibold">Gama Corsair</div>
+              <div className="text-xl font-black text-amber-300 mt-0.5">
+                {psus.filter(p => p.brand === 'Corsair').length} modelos
+              </div>
+            </div>
+            <div className="p-3.5 bg-slate-900/80 rounded-xl border border-cyan-500/30">
+              <div className="text-[10px] text-cyan-400 uppercase font-semibold">Nativas ATX 3.1 / 3.0</div>
+              <div className="text-xl font-black text-cyan-300 mt-0.5">
+                {psus.filter(p => p.atx3).length}
+              </div>
+            </div>
+            <div className="p-3.5 bg-slate-900/80 rounded-xl border border-emerald-500/30">
+              <div className="text-[10px] text-emerald-400 uppercase font-semibold">Ultra Power (1000W+)</div>
+              <div className="text-xl font-black text-emerald-300 mt-0.5">
+                {psus.filter(p => p.wattage >= 1000).length}
+              </div>
+            </div>
+          </div>
+
+          {/* Brand Filter */}
+          <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-900/80 border border-slate-800 rounded-2xl">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2">Filtrar Fabricante:</span>
+            {['All', 'Corsair', 'ASUS ROG', 'Seasonic', 'be quiet!', 'Genérica'].map(b => (
+              <button
+                key={b}
+                onClick={() => setAdminPsuFilterBrand(b)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  adminPsuFilterBrand === b
+                    ? 'bg-amber-500 text-slate-950 font-black'
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                {b === 'All' ? `Todas (${psus.length})` : b}
+              </button>
+            ))}
+          </div>
+
+          {/* PSUs Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filteredAdminPsus.map(p => (
+              <div
+                key={p.id}
+                className="p-4 bg-slate-900/80 border border-slate-800 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition-all space-y-3"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
+                      p.brand === 'Corsair'
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                        : p.brand === 'ASUS ROG'
+                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                        : p.brand === 'Seasonic'
+                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                        : 'bg-slate-800 text-slate-300 border-slate-700'
+                    }`}>
+                      {p.brand || 'Genérica'}
+                    </span>
+                    {p.atx3 && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-mono">
+                        ATX 3.1 Ready
+                      </span>
+                    )}
+                  </div>
+
+                  <h4 className="text-sm font-bold text-white line-clamp-2">{p.name}</h4>
+
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <span className="text-base font-black text-amber-400 font-mono">{p.wattage}W</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                      {p.efficiency}
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] text-slate-400 mt-2 space-y-0.5">
+                    {p.tier && <div>• <span className="text-slate-300 font-semibold">{p.tier}</span></div>}
+                    {p.modular && <div>• {p.modular}</div>}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+                  <button
+                    onClick={() => {
+                      setEditingPsu(p);
+                      setShowPsuModal(true);
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-amber-400 cursor-pointer transition-colors"
+                    title="Editar Fuente"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => deletePsu(p.id)}
+                    className="p-1.5 text-slate-400 hover:text-rose-400 cursor-pointer transition-colors"
+                    title="Eliminar Fuente"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -824,6 +1204,139 @@ export const AdminView: React.FC = () => {
                 className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold cursor-pointer"
               >
                 Guardar en Caliente
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* PSU Modal */}
+      {showPsuModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <form onSubmit={handleSavePsu} className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 space-y-4 text-xs">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber-400" />
+                {editingPsu.id ? 'Editar Fuente de Poder' : 'Nueva Fuente de Poder'}
+              </h3>
+              <span className="text-[10px] text-slate-400 uppercase font-mono">Actualización en caliente</span>
+            </div>
+
+            <div>
+              <label className="text-slate-400 font-bold block mb-1">Nombre Completo del Modelo</label>
+              <input
+                type="text"
+                required
+                value={editingPsu.name || ''}
+                onChange={(e) => setEditingPsu({ ...editingPsu, name: e.target.value })}
+                placeholder="ej: Corsair RM1000x SHIFT 1000W 80 PLUS Gold"
+                className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-slate-400 font-bold block mb-1">Fabricante / Marca</label>
+                <select
+                  value={editingPsu.brand || 'Corsair'}
+                  onChange={(e) => setEditingPsu({ ...editingPsu, brand: e.target.value })}
+                  className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                >
+                  <option value="Corsair">Corsair</option>
+                  <option value="ASUS ROG">ASUS ROG</option>
+                  <option value="Seasonic">Seasonic</option>
+                  <option value="be quiet!">be quiet!</option>
+                  <option value="MSI">MSI</option>
+                  <option value="EVGA">EVGA</option>
+                  <option value="Genérica">Genérica / Básica</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-bold block mb-1">Potencia (Watts)</label>
+                <input
+                  type="number"
+                  required
+                  min={300}
+                  max={2500}
+                  step={50}
+                  value={editingPsu.wattage || 850}
+                  onChange={(e) => setEditingPsu({ ...editingPsu, wattage: Number(e.target.value) })}
+                  className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-slate-400 font-bold block mb-1">Eficiencia Energética</label>
+                <select
+                  value={editingPsu.efficiency || '80 PLUS Gold'}
+                  onChange={(e) => setEditingPsu({ ...editingPsu, efficiency: e.target.value as any })}
+                  className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                >
+                  <option value="80 PLUS Titanium">80 PLUS Titanium</option>
+                  <option value="80 PLUS Platinum">80 PLUS Platinum</option>
+                  <option value="80 PLUS Gold">80 PLUS Gold</option>
+                  <option value="80 PLUS Silver">80 PLUS Silver</option>
+                  <option value="80 PLUS Bronze">80 PLUS Bronze</option>
+                  <option value="80 PLUS White">80 PLUS White</option>
+                  <option value="Genérica">Genérica / Sin Certificación</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-bold block mb-1">Modularidad</label>
+                <select
+                  value={editingPsu.modular || 'Totalmente Modular'}
+                  onChange={(e) => setEditingPsu({ ...editingPsu, modular: e.target.value as any })}
+                  className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                >
+                  <option value="Totalmente Modular">Totalmente Modular</option>
+                  <option value="Semi-Modular">Semi-Modular</option>
+                  <option value="No Modular">No Modular</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-slate-400 font-bold block mb-1">Tier / Categoría de Calidad</label>
+                <input
+                  type="text"
+                  value={editingPsu.tier || ''}
+                  onChange={(e) => setEditingPsu({ ...editingPsu, tier: e.target.value })}
+                  placeholder="ej: Tier A+ (GaN DSP) o Tier A"
+                  className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                />
+              </div>
+
+              <div className="flex items-center pt-5">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingPsu.atx3)}
+                    onChange={(e) => setEditingPsu({ ...editingPsu, atx3: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                  <span className="text-white font-bold">Compatible ATX 3.0 / ATX 3.1</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowPsuModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white cursor-pointer transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black cursor-pointer transition-all shadow-md"
+              >
+                Guardar Fuente
               </button>
             </div>
           </form>

@@ -19,12 +19,17 @@ import {
   TrendingUp,
   Info,
   Sliders,
-  ChevronDown
+  ChevronDown,
+  Tv,
+  Maximize2,
+  LayoutGrid
 } from 'lucide-react';
 import { useHardware } from '../context/HardwareContext';
 import { useAuth } from '../context/AuthContext';
-import { CPU, GPU, RAM, Storage, ResolutionType, WorkloadType } from '../types';
+import { CPU, GPU, RAM, Storage, ResolutionType, WorkloadType, UpscalingTechnology, UpscalingMode } from '../types';
 import { ExportCardModal } from '../components/ExportCardModal';
+import { groupCpusByGeneration, getCpuGenerationMeta, KNOWN_CPU_GENERATIONS } from '../utils/cpuGenerations';
+import { groupGpusByGeneration, getGpuGenerationMeta, KNOWN_GPU_GENERATIONS } from '../utils/gpuGenerations';
 import confetti from 'canvas-confetti';
 
 export const PcDiagnosisView: React.FC = () => {
@@ -38,25 +43,66 @@ export const PcDiagnosisView: React.FC = () => {
   const [cpuSearch, setCpuSearch] = useState('');
   const [gpuSearch, setGpuSearch] = useState('');
   const [cpuFilterBrand, setCpuFilterBrand] = useState<'All' | 'AMD' | 'Intel'>('All');
+  const [cpuFilterGen, setCpuFilterGen] = useState<string>('All');
   const [gpuFilterBrand, setGpuFilterBrand] = useState<'All' | 'NVIDIA' | 'AMD'>('All');
+  const [gpuFilterGen, setGpuFilterGen] = useState<string>('All');
+
+  // Available CPU generations based on brand filter
+  const availableGenerations = useMemo(() => {
+    return KNOWN_CPU_GENERATIONS.filter(g => {
+      if (cpuFilterBrand === 'All') return true;
+      return g.brand === cpuFilterBrand;
+    });
+  }, [cpuFilterBrand]);
 
   // Filtered CPUs
   const filteredCpus = useMemo(() => {
     return cpus.filter(c => {
-      const matchSearch = c.name.toLowerCase().includes(cpuSearch.toLowerCase()) || c.socket.toLowerCase().includes(cpuSearch.toLowerCase());
+      const matchSearch = c.name.toLowerCase().includes(cpuSearch.toLowerCase()) || 
+                          c.socket.toLowerCase().includes(cpuSearch.toLowerCase());
       const matchBrand = cpuFilterBrand === 'All' || c.brand === cpuFilterBrand;
-      return matchSearch && matchBrand;
+      const genMeta = getCpuGenerationMeta(c);
+      const matchGen = cpuFilterGen === 'All' || genMeta.id === cpuFilterGen;
+      return matchSearch && matchBrand && matchGen;
     });
-  }, [cpus, cpuSearch, cpuFilterBrand]);
+  }, [cpus, cpuSearch, cpuFilterBrand, cpuFilterGen]);
+
+  // Grouped and sorted by generation
+  const cpuGroups = useMemo(() => {
+    return groupCpusByGeneration(filteredCpus);
+  }, [filteredCpus]);
+
+  const currentCpuMeta = useMemo(() => {
+    return getCpuGenerationMeta(currentConfig.cpu);
+  }, [currentConfig.cpu]);
+
+  // Available GPU generations based on brand filter
+  const availableGpuGenerations = useMemo(() => {
+    return KNOWN_GPU_GENERATIONS.filter(g => {
+      if (gpuFilterBrand === 'All') return true;
+      return g.brand === gpuFilterBrand;
+    });
+  }, [gpuFilterBrand]);
 
   // Filtered GPUs
   const filteredGpus = useMemo(() => {
     return gpus.filter(g => {
       const matchSearch = g.name.toLowerCase().includes(gpuSearch.toLowerCase());
       const matchBrand = gpuFilterBrand === 'All' || g.brand === gpuFilterBrand;
-      return matchSearch && matchBrand;
+      const genMeta = getGpuGenerationMeta(g);
+      const matchGen = gpuFilterGen === 'All' || genMeta.id === gpuFilterGen;
+      return matchSearch && matchBrand && matchGen;
     });
-  }, [gpus, gpuSearch, gpuFilterBrand]);
+  }, [gpus, gpuSearch, gpuFilterBrand, gpuFilterGen]);
+
+  // Grouped and sorted GPUs by generation
+  const gpuGroups = useMemo(() => {
+    return groupGpusByGeneration(filteredGpus);
+  }, [filteredGpus]);
+
+  const currentGpuMeta = useMemo(() => {
+    return getGpuGenerationMeta(currentConfig.gpu);
+  }, [currentConfig.gpu]);
 
   const handleSaveDiagnosis = () => {
     saveDiagnosis({
@@ -69,11 +115,13 @@ export const PcDiagnosisView: React.FC = () => {
     setTimeout(() => setSavedSuccess(false), 2500);
   };
 
-  const resolutions: { id: ResolutionType; label: string; sub: string }[] = [
-    { id: '1080p', label: '1080p Full HD', sub: 'Carga alta en CPU / eSports' },
-    { id: '1440p', label: '1440p Quad HD', sub: 'Equilibrio estándar Gaming' },
-    { id: '4k', label: '4K Ultra HD', sub: 'Carga pesada en GPU' },
-    { id: 'ultrawide', label: 'Ultrawide (21:9)', sub: '3440 x 1440p' }
+  const resolutions: { id: ResolutionType; label: string; sub: string; badge?: string }[] = [
+    { id: '1080p', label: '1080p Full HD', sub: '1920x1080 • Carga alta CPU' },
+    { id: '1440p', label: '1440p Quad HD', sub: '2560x1440 • Equilibrio Gaming' },
+    { id: 'ultrawide', label: 'Ultrawide 21:9', sub: '3440x1440 • Inmersivo' },
+    { id: '4k', label: '4K Ultra HD', sub: '3840x2160 • Carga Pesada GPU' },
+    { id: '5k_ultrawide', label: '5K Dual QHD (32:9)', sub: '5120x1440 • Super Panorámico' },
+    { id: '8k', label: '8K Ultra HD', sub: '7680x4320 • 33.2 Megapíxeles', badge: 'MÁXIMO 8K' }
   ];
 
   const workloads: { id: WorkloadType; label: string; icon: string }[] = [
@@ -159,7 +207,10 @@ export const PcDiagnosisView: React.FC = () => {
                 {(['All', 'AMD', 'Intel'] as const).map(b => (
                   <button
                     key={b}
-                    onClick={() => setCpuFilterBrand(b)}
+                    onClick={() => {
+                      setCpuFilterBrand(b);
+                      setCpuFilterGen('All');
+                    }}
                     className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
                       cpuFilterBrand === b ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30' : 'text-slate-500 hover:text-slate-300'
                     }`}
@@ -170,15 +221,30 @@ export const PcDiagnosisView: React.FC = () => {
               </div>
             </div>
 
-            <div className="relative mb-2">
-              <Search className="absolute left-3 top-3 w-3.5 h-3.5 text-slate-500" />
-              <input
-                type="text"
-                value={cpuSearch}
-                onChange={(e) => setCpuSearch(e.target.value)}
-                placeholder="Filtrar CPU (ej: 7800X3D, 14700K)..."
-                className="w-full pl-9 pr-3 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  value={cpuSearch}
+                  onChange={(e) => setCpuSearch(e.target.value)}
+                  placeholder="Buscar modelo o socket..."
+                  className="w-full pl-9 pr-3 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all"
+                />
+              </div>
+
+              <select
+                value={cpuFilterGen}
+                onChange={(e) => setCpuFilterGen(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
+              >
+                <option value="All">⚡ Todas las Generaciones</option>
+                {availableGenerations.map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.shortLabel}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <select
@@ -190,17 +256,34 @@ export const PcDiagnosisView: React.FC = () => {
               }}
               className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
             >
-              {filteredCpus.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name} • {c.cores} Cores / {c.threads} Threads • {c.tdp}W ({c.socket})
-                </option>
+              {cpuGroups.map(group => (
+                <optgroup key={group.id} label={`─── ${group.label.toUpperCase()} ───`}>
+                  {group.cpus.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} • {c.cores}C/{c.threads}T • {c.tdp}W ({c.socket})
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
 
-            <div className="mt-3 p-2.5 bg-[#1C222D]/60 rounded-xl border border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-              <span>Gaming: <strong className="text-cyan-400">{currentConfig.cpu.gamingScore}/100</strong></span>
-              <span>Boost: <strong className="text-slate-200">{currentConfig.cpu.boostClock} GHz</strong></span>
-              <span>TDP: <strong className="text-orange-400">{currentConfig.cpu.tdp}W</strong></span>
+            <div className="mt-3 p-2.5 bg-[#1C222D]/60 rounded-xl border border-slate-700/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-300 font-bold border border-cyan-500/20 text-[10px]">
+                  {currentCpuMeta.shortLabel}
+                </span>
+                <span className="text-slate-500">•</span>
+                <span className="font-mono text-slate-300">{currentConfig.cpu.socket}</span>
+                <span className="text-slate-500">•</span>
+                <span className="font-mono text-slate-300">PCIe {currentConfig.cpu.pcieGen}.0</span>
+                <span className="text-slate-500">•</span>
+                <span className="font-mono text-slate-300">{currentConfig.cpu.releaseYear}</span>
+              </div>
+              <div className="flex items-center gap-3 font-mono">
+                <span>Gaming: <strong className="text-cyan-400">{currentConfig.cpu.gamingScore}/100</strong></span>
+                <span>Boost: <strong className="text-slate-200">{currentConfig.cpu.boostClock} GHz</strong></span>
+                <span>TDP: <strong className="text-orange-400">{currentConfig.cpu.tdp}W</strong></span>
+              </div>
             </div>
           </div>
 
@@ -214,7 +297,10 @@ export const PcDiagnosisView: React.FC = () => {
                 {(['All', 'NVIDIA', 'AMD'] as const).map(b => (
                   <button
                     key={b}
-                    onClick={() => setGpuFilterBrand(b)}
+                    onClick={() => {
+                      setGpuFilterBrand(b);
+                      setGpuFilterGen('All');
+                    }}
                     className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
                       gpuFilterBrand === b ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30' : 'text-slate-500 hover:text-slate-300'
                     }`}
@@ -225,15 +311,30 @@ export const PcDiagnosisView: React.FC = () => {
               </div>
             </div>
 
-            <div className="relative mb-2">
-              <Search className="absolute left-3 top-3 w-3.5 h-3.5 text-slate-500" />
-              <input
-                type="text"
-                value={gpuSearch}
-                onChange={(e) => setGpuSearch(e.target.value)}
-                placeholder="Filtrar GPU (ej: RTX 5070 Ti, 4070 Super)..."
-                className="w-full pl-9 pr-3 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  value={gpuSearch}
+                  onChange={(e) => setGpuSearch(e.target.value)}
+                  placeholder="Buscar modelo (ej: RTX 4070, RX 6700)..."
+                  className="w-full pl-9 pr-3 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all"
+                />
+              </div>
+
+              <select
+                value={gpuFilterGen}
+                onChange={(e) => setGpuFilterGen(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
+              >
+                <option value="All">⚡ Todas las Familias ({filteredGpus.length})</option>
+                {availableGpuGenerations.map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.shortLabel}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <select
@@ -245,26 +346,51 @@ export const PcDiagnosisView: React.FC = () => {
               }}
               className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
             >
-              {filteredGpus.map(g => (
-                <option key={g.id} value={g.id}>
-                  {g.name} • {g.vram}GB {g.vramType} • {g.tdp}W
-                </option>
+              {gpuGroups.map(group => (
+                <optgroup key={group.id} label={`─── ${group.label.toUpperCase()} ───`}>
+                  {group.gpus.map(g => (
+                    <option key={g.id} value={g.id}>
+                      {g.name} • {g.vram}GB {g.vramType} • {g.tdp}W
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
 
-            <div className="mt-3 p-2.5 bg-[#1C222D]/60 rounded-xl border border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-              <span>1440p: <strong className="text-cyan-400">{currentConfig.gpu.score1440p}/100</strong></span>
-              <span>4K: <strong className="text-blue-400">{currentConfig.gpu.score4k}/100</strong></span>
-              <span>PSU Base: <strong className="text-orange-400">{currentConfig.gpu.recommendedPsu}W</strong></span>
+            <div className="mt-3 p-2.5 bg-[#1C222D]/60 rounded-xl border border-slate-700/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-300 font-bold border border-blue-500/20 text-[10px]">
+                  {currentGpuMeta.shortLabel}
+                </span>
+                <span className="text-slate-500">•</span>
+                <span className="font-mono text-slate-300">{currentConfig.gpu.vram}GB {currentConfig.gpu.vramType}</span>
+                <span className="text-slate-500">•</span>
+                <span className="font-mono text-slate-300">{currentConfig.gpu.releaseYear}</span>
+                <span className="text-slate-500">•</span>
+                <span className="text-slate-400 text-[10px] truncate max-w-[150px] sm:max-w-none">{currentConfig.gpu.dlssFsrSupport}</span>
+              </div>
+              <div className="flex items-center gap-3 font-mono">
+                <span>1080p: <strong className="text-emerald-400">{currentConfig.gpu.score1080p}/100</strong></span>
+                <span>1440p: <strong className="text-cyan-400">{currentConfig.gpu.score1440p}/100</strong></span>
+                <span>4K: <strong className="text-blue-400">{currentConfig.gpu.score4k}/100</strong></span>
+                <span>PSU: <strong className="text-orange-400">{currentConfig.gpu.recommendedPsu}W</strong></span>
+              </div>
             </div>
           </div>
 
           {/* RAM & Storage Selection */}
           <div className="bg-[#151921] border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2 mb-2">
-                <Layers className="w-4 h-4 text-cyan-400" /> MEMORIA RAM
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-cyan-400" /> MEMORIA RAM
+                </label>
+                {currentConfig.ram.brand && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                    {currentConfig.ram.brand}
+                  </span>
+                )}
+              </div>
               <select
                 id="diag-select-ram"
                 value={currentConfig.ram.id}
@@ -274,11 +400,27 @@ export const PcDiagnosisView: React.FC = () => {
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
-                {rams.map(r => (
-                  <option key={r.id} value={r.id}>
-                    {r.capacityGb}GB {r.type} @ {r.speedMhz}MHz ({r.channels === 'dual' ? 'Dual Channel' : 'Single Channel'})
-                  </option>
-                ))}
+                <optgroup label="─── CORSAIR DOMINATOR & VENGEANCE HIGH-END ───">
+                  {rams.filter(r => r.brand === 'Corsair').map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.name || `${r.capacityGb}GB ${r.type}`} • {r.speedMhz}MHz (CL{r.casLatency})
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="─── G.SKILL & OTRAS MARCAS PREMIUM ───">
+                  {rams.filter(r => r.brand && r.brand !== 'Corsair').map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.name || `${r.capacityGb}GB ${r.type}`} • {r.speedMhz}MHz (CL{r.casLatency})
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="─── KITS ESTÁNDAR / REFERENCIA JEDEC ───">
+                  {rams.filter(r => !r.brand).map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.name || `${r.capacityGb}GB ${r.type} @ ${r.speedMhz}MHz`}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
 
@@ -305,22 +447,34 @@ export const PcDiagnosisView: React.FC = () => {
 
             {/* Fuente de Poder (PSU) que tiene el usuario */}
             <div className="pt-2 border-t border-slate-800/80">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
                 <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-400" /> FUENTE DE PODER (TU FUENTE ACTUAL)
+                  <Zap className="w-4 h-4 text-amber-400" /> FUENTE DE PODER (PSU ACTUAL)
                 </label>
                 {currentConfig.psu && (
-                  <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded ${
-                    currentResult.powerStats.userPsuEvaluation?.status === 'optimal'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : currentResult.powerStats.userPsuEvaluation?.status === 'sufficient'
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                      : currentResult.powerStats.userPsuEvaluation?.status === 'tight'
-                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                      : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                  }`}>
-                    {currentConfig.psu.wattage}W • {currentConfig.psu.efficiency}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {currentConfig.psu.brand === 'Corsair' && (
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        CORSAIR
+                      </span>
+                    )}
+                    {currentConfig.psu.atx3 && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-mono">
+                        ATX 3.1
+                      </span>
+                    )}
+                    <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded ${
+                      currentResult.powerStats.userPsuEvaluation?.status === 'optimal'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : currentResult.powerStats.userPsuEvaluation?.status === 'sufficient'
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                        : currentResult.powerStats.userPsuEvaluation?.status === 'tight'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                    }`}>
+                      {currentConfig.psu.wattage}W • {currentConfig.psu.efficiency}
+                    </span>
+                  </div>
                 )}
               </div>
               <select
@@ -332,12 +486,48 @@ export const PcDiagnosisView: React.FC = () => {
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
-                {psus.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
+                <optgroup label="─── FUENTES CORSAIR (SHIFT, HX PLATINUM, AX TITANIUM & RM) ───">
+                  {psus.filter(p => p.brand === 'Corsair').map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="─── FUENTES PREMIUM (ASUS ROG, SEASONIC, BE QUIET!, MSI) ───">
+                  {psus.filter(p => p.brand && p.brand !== 'Corsair' && p.brand !== 'Genérica').map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="─── REFERENCIA ESTÁNDAR & FUENTES BÁSICAS ───">
+                  {psus.filter(p => !p.brand || p.brand === 'Genérica').map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
+
+              {currentConfig.psu && (
+                <div className="mt-2 flex items-center gap-2 flex-wrap text-[11px] text-slate-400 font-mono">
+                  {currentConfig.psu.tier && (
+                    <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-sans font-semibold text-[10px]">
+                      {currentConfig.psu.tier}
+                    </span>
+                  )}
+                  {currentConfig.psu.modular && (
+                    <span className="text-slate-400">
+                      • {currentConfig.psu.modular}
+                    </span>
+                  )}
+                  {currentConfig.psu.atx3 && (
+                    <span className="text-cyan-400 font-semibold">
+                      • Cable 12V-2x6 Nativo (RTX 40/50 Ready)
+                    </span>
+                  )}
+                </div>
+              )}
               {currentResult.powerStats.userPsuEvaluation && (
                 <p className={`mt-2 text-[11px] leading-relaxed ${
                   currentResult.powerStats.userPsuEvaluation.status === 'optimal'
@@ -354,31 +544,204 @@ export const PcDiagnosisView: React.FC = () => {
             </div>
           </div>
 
-          {/* Resolution & Workload Config */}
-          <div className="bg-[#151921] border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+          {/* Multi-Monitor, 8K Resolution & Upscaling Config */}
+          <div className="bg-[#151921] border border-slate-800 rounded-2xl p-5 shadow-lg space-y-5">
+            {/* 1. Multi-Monitor Setup */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block">
-                RESOLUCIÓN DE PANTALLA
-              </label>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
+                  <Monitor className="w-3.5 h-3.5 text-cyan-400" /> CANTIDAD DE MONITORES
+                </label>
+                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/60 font-semibold">
+                  {(currentConfig.monitorCount || 1) === 1 ? '1 Pantalla' : `${currentConfig.monitorCount} Pantallas Activas`}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {[1, 2, 3, 4].map(count => (
+                  <button
+                    key={count}
+                    id={`diag-monitor-btn-${count}`}
+                    onClick={() => updateConfig({ monitorCount: count })}
+                    className={`py-2 px-1 rounded-xl text-center border text-xs font-bold transition-all cursor-pointer ${
+                      (currentConfig.monitorCount || 1) === count
+                        ? 'bg-cyan-500/15 border-cyan-500 text-cyan-300 shadow-sm shadow-cyan-500/10'
+                        : 'bg-[#1C222D] border-slate-700 text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-1 mb-0.5">
+                      <Tv className="w-3 h-3" />
+                      <span>{count}x</span>
+                    </div>
+                    <div className="text-[9px] font-normal text-slate-400 truncate">
+                      {count === 1 ? 'Individual' : `${count} Monitores`}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Mode if > 1 monitor */}
+              {(currentConfig.monitorCount || 1) > 1 && (
+                <div className="mt-2.5 p-2.5 bg-[#1C222D]/90 rounded-xl border border-slate-700/80 space-y-1.5">
+                  <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    Modo de uso con {currentConfig.monitorCount} pantallas:
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      id="diag-monitor-mode-primary"
+                      onClick={() => updateConfig({ monitorMode: 'gaming_primary' })}
+                      className={`p-2 rounded-lg text-left border text-xs cursor-pointer transition-all ${
+                        (currentConfig.monitorMode || 'gaming_primary') === 'gaming_primary'
+                          ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300 font-bold'
+                          : 'bg-[#151921] border-slate-700 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <div className="text-xs">🎮 Juego + Multitarea</div>
+                      <div className="text-[10px] text-slate-400 font-normal mt-0.5">Juego en 1 + Discord/OBS en secundarias</div>
+                    </button>
+
+                    <button
+                      id="diag-monitor-mode-surround"
+                      onClick={() => updateConfig({ monitorMode: 'surround_span' })}
+                      className={`p-2 rounded-lg text-left border text-xs cursor-pointer transition-all ${
+                        currentConfig.monitorMode === 'surround_span'
+                          ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300 font-bold'
+                          : 'bg-[#151921] border-slate-700 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <div className="text-xs">🏎️ Surround Panorámico</div>
+                      <div className="text-[10px] text-slate-400 font-normal mt-0.5">Juego unificado a lo ancho (Simuladores)</div>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Output Resolution (Up to 8K) */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 block">
+                  RESOLUCIÓN DE PANTALLA (HASTA 8K ULTRA HD)
+                </label>
+                {currentConfig.resolution === '8k' && (
+                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-gradient-to-r from-purple-500/30 to-cyan-500/30 text-cyan-300 border border-cyan-500/50">
+                    ✨ 33.2 Megapíxeles
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {resolutions.map(r => (
                   <button
                     key={r.id}
                     id={`diag-res-btn-${r.id}`}
                     onClick={() => updateConfig({ resolution: r.id })}
-                    className={`p-3 rounded-xl text-left border transition-all cursor-pointer ${
+                    className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer relative overflow-hidden ${
                       currentConfig.resolution === r.id
                         ? 'bg-cyan-500/15 border-cyan-500 text-cyan-300 shadow-sm shadow-cyan-500/10'
                         : 'bg-[#1C222D] border-slate-700 text-slate-400 hover:border-slate-600'
                     }`}
                   >
+                    {r.badge && (
+                      <div className="absolute top-0 right-0 bg-gradient-to-l from-purple-600 to-cyan-600 text-[8px] font-black text-white px-1.5 py-0.5 rounded-bl">
+                        {r.badge}
+                      </div>
+                    )}
                     <div className="text-xs font-bold">{r.label}</div>
-                    <div className="text-[10px] text-slate-500 truncate">{r.sub}</div>
+                    <div className="text-[10px] text-slate-500 truncate mt-0.5">{r.sub}</div>
                   </button>
                 ))}
               </div>
             </div>
 
+            {/* 3. Upscaling Technologies & Modes (DLSS / FSR / XeSS) */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> ESCALADO INTELIGENTE (DLSS / FSR / XeSS)
+                </label>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {currentConfig.upscalingMode === 'native' || !currentConfig.upscalingMode ? 'Nativo 100%' : 'Escalado Activo'}
+                </span>
+              </div>
+
+              {/* Technology selector */}
+              <div className="grid grid-cols-4 gap-2 mb-2.5">
+                {(['dlss', 'fsr', 'xess', 'none'] as const).map(tech => (
+                  <button
+                    key={tech}
+                    id={`diag-tech-btn-${tech}`}
+                    onClick={() => {
+                      if (tech === 'none') {
+                        updateConfig({ upscalingMode: 'native' });
+                      } else {
+                        updateConfig({
+                          upscalingTech: tech,
+                          upscalingMode: currentConfig.upscalingMode === 'native' ? 'quality' : currentConfig.upscalingMode
+                        });
+                      }
+                    }}
+                    className={`py-1.5 px-2 rounded-lg border text-center text-xs font-bold transition-all cursor-pointer ${
+                      tech === 'none'
+                        ? currentConfig.upscalingMode === 'native'
+                          ? 'bg-slate-700 border-slate-500 text-white'
+                          : 'bg-[#1C222D] border-slate-800 text-slate-400'
+                        : currentConfig.upscalingTech === tech && currentConfig.upscalingMode !== 'native'
+                        ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300'
+                        : 'bg-[#1C222D] border-slate-700 text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    {tech === 'dlss' ? 'NVIDIA DLSS' : tech === 'fsr' ? 'AMD FSR' : tech === 'xess' ? 'Intel XeSS' : 'Off (Nativo)'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Mode selector (Quality, Balanced, Performance, Ultra Perf) */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                {[
+                  { id: 'native' as UpscalingMode, label: 'Nativo', sub: '100% Render' },
+                  { id: 'quality' as UpscalingMode, label: 'Calidad', sub: '67% Render' },
+                  { id: 'balanced' as UpscalingMode, label: 'Equilibrado', sub: '58% Render' },
+                  { id: 'performance' as UpscalingMode, label: 'Rendimiento', sub: '50% Render' },
+                  { id: 'ultra_performance' as UpscalingMode, label: 'Ultra Rend.', sub: '33% (8K Ideal)', highlight: true }
+                ].map(mode => (
+                  <button
+                    key={mode.id}
+                    id={`diag-upscale-mode-${mode.id}`}
+                    onClick={() => updateConfig({ upscalingMode: mode.id })}
+                    className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
+                      (currentConfig.upscalingMode || 'native') === mode.id
+                        ? 'bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border-cyan-500 text-cyan-300 font-bold shadow-sm'
+                        : mode.highlight
+                        ? 'bg-[#1C222D] border-purple-800/60 text-purple-300 hover:border-purple-600'
+                        : 'bg-[#1C222D] border-slate-700 text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold leading-tight">{mode.label}</div>
+                    <div className="text-[9px] text-slate-400 font-mono mt-0.5">{mode.sub}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Live Render Scale Info Chip */}
+              {currentResult.displayAnalysis && (
+                <div className="mt-2.5 p-2.5 bg-[#1C222D]/70 rounded-xl border border-slate-700/60 flex items-center justify-between text-[11px]">
+                  <div className="flex items-center gap-2">
+                    <Maximize2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                    <span className="text-slate-300">
+                      Render interno: <strong className="text-white font-mono">{currentResult.displayAnalysis.internalRenderResolutionLabel}</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 font-mono">
+                    <span className="text-slate-400">➔ Salida:</span>
+                    <strong className="text-cyan-300 font-semibold">{currentResult.displayAnalysis.outputResolutionLabel.split(' ')[0]}</strong>
+                    <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-800/60">
+                      {currentResult.displayAnalysis.renderScalePct}%
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 4. Main Workloads */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-slate-500 block">
@@ -499,6 +862,119 @@ export const PcDiagnosisView: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Dedicated Display, Multi-Monitor & VRAM Analysis Card */}
+          {currentResult.displayAnalysis && (
+            <div className="bg-[#151921] border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                  <Monitor className="w-4 h-4 text-cyan-400" /> ANÁLISIS DE PANTALLAS, ESCALADO & VRAM
+                </h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/80 font-bold">
+                    {currentResult.displayAnalysis.totalMonitors > 1
+                      ? `${currentResult.displayAnalysis.totalMonitors}x Pantallas (${currentResult.displayAnalysis.mode === 'surround_span' ? 'Surround' : 'Multitarea'})`
+                      : 'Monitor Único'}
+                  </span>
+                  {currentConfig.resolution === '8k' && (
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-gradient-to-r from-purple-600 to-cyan-600 text-white shadow-sm">
+                      8K Ultra HD
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Metric indicators */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-[#1C222D] p-3.5 rounded-xl border border-slate-700/80">
+                  <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Resolución Salida</div>
+                  <div className="text-xs font-bold text-white mt-1 truncate">
+                    {currentResult.displayAnalysis.outputResolutionLabel.split('(')[0]}
+                  </div>
+                  <div className="text-[10px] text-cyan-400 font-mono mt-0.5">
+                    {currentResult.displayAnalysis.totalPixelsMegaPixels} Megapíxeles
+                  </div>
+                </div>
+
+                <div className="bg-[#1C222D] p-3.5 rounded-xl border border-slate-700/80">
+                  <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Render Interno</div>
+                  <div className="text-xs font-bold text-white mt-1 font-mono">
+                    {currentResult.displayAnalysis.internalRenderResolutionLabel}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                    {currentResult.displayAnalysis.renderScalePct}% píxeles nativos
+                  </div>
+                </div>
+
+                <div className="bg-[#1C222D] p-3.5 rounded-xl border border-slate-700/80">
+                  <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Demanda de VRAM</div>
+                  <div className="text-sm font-black text-white mt-0.5 flex items-baseline gap-1">
+                    <span>{currentResult.displayAnalysis.vramEstimatedUsageGb} GB</span>
+                    <span className="text-[10px] text-slate-400 font-normal">/ {currentResult.displayAnalysis.vramCapacityGb} GB</span>
+                  </div>
+                  <div className={`text-[10px] font-bold font-mono mt-0.5 ${
+                    currentResult.displayAnalysis.vramSaturationPct > 100 ? 'text-rose-400' :
+                    currentResult.displayAnalysis.vramSaturationPct > 85 ? 'text-amber-400' : 'text-emerald-400'
+                  }`}>
+                    {currentResult.displayAnalysis.vramSaturationPct}% de VRAM
+                  </div>
+                </div>
+
+                <div className="bg-[#1C222D] p-3.5 rounded-xl border border-slate-700/80">
+                  <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Modo Escalado</div>
+                  <div className="text-xs font-bold text-cyan-300 mt-1 truncate">
+                    {currentResult.displayAnalysis.upscalingActive ? currentResult.displayAnalysis.upscalingName.split('(')[0] : 'Nativo (Sin Escalado)'}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                    {currentResult.displayAnalysis.multiMonitorOverheadWatts > 0 ? `+${currentResult.displayAnalysis.multiMonitorOverheadWatts}W pantallas` : '0W adicional'}
+                  </div>
+                </div>
+              </div>
+
+              {/* VRAM Saturation Progress Bar */}
+              <div className="p-3.5 bg-[#1C222D]/80 rounded-xl border border-slate-700/60 space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400 flex items-center gap-1.5 font-medium">
+                    <span>Uso de Memoria Gráfica ({currentConfig.gpu.name}):</span>
+                  </span>
+                  <span className={`font-mono font-bold ${
+                    currentResult.displayAnalysis.vramSaturationPct > 100 ? 'text-rose-400' :
+                    currentResult.displayAnalysis.vramSaturationPct > 85 ? 'text-amber-400' : 'text-cyan-400'
+                  }`}>
+                    {currentResult.displayAnalysis.vramEstimatedUsageGb} GB de {currentResult.displayAnalysis.vramCapacityGb} GB ({currentResult.displayAnalysis.vramSaturationPct}%)
+                  </span>
+                </div>
+                <div className="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 ${
+                      currentResult.displayAnalysis.vramSaturationPct > 100
+                        ? 'bg-gradient-to-r from-rose-500 to-red-600'
+                        : currentResult.displayAnalysis.vramSaturationPct > 85
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                        : 'bg-gradient-to-r from-cyan-500 to-blue-500'
+                    }`}
+                    style={{ width: `${Math.min(100, currentResult.displayAnalysis.vramSaturationPct)}%` }}
+                  />
+                </div>
+
+                {/* VRAM Alert if any */}
+                {currentResult.displayAnalysis.vramAlert && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-xs text-rose-300 flex items-start gap-2 mt-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <span>{currentResult.displayAnalysis.vramAlert}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cable & Bandwidth Recommendation Banner */}
+              <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl flex items-center justify-between text-xs text-slate-300">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span><strong>Cable/Puerto de video aconsejado:</strong> {currentResult.displayAnalysis.cableRecommendation}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Watts & Power Recommendation Card with Sleek Circular Gauge */}
           <div className="bg-[#151921] border border-slate-800 rounded-2xl p-6 shadow-lg">

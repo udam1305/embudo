@@ -32,18 +32,25 @@ interface HardwareContextType {
   deleteGpu: (id: string) => Promise<boolean>;
   addOrUpdateSoc: (soc: MobileSoC) => Promise<boolean>;
   deleteSoc: (id: string) => Promise<boolean>;
+  addOrUpdatePsu: (psu: PSU) => Promise<boolean>;
+  deletePsu: (id: string) => Promise<boolean>;
 }
 
 const HardwareContext = createContext<HardwareContextType | undefined>(undefined);
 
-// Default seed configuration as requested: AMD Ryzen 7 7800X3D + RTX 5070 Ti in 1440p
+// Default seed configuration as requested: AMD Ryzen 7 7800X3D + RTX 5070 Ti in 1440p with Corsair PSU & RAM
 const DEFAULT_CONFIG: DiagnosisConfig = {
-  cpu: INITIAL_CPUS[0], // AMD Ryzen 7 7800X3D
+  cpu: INITIAL_CPUS.find(c => c.id === 'cpu-7800x3d') || INITIAL_CPUS[0], // AMD Ryzen 7 7800X3D
   gpu: INITIAL_GPUS[0], // NVIDIA GeForce RTX 5070 Ti
-  ram: INITIAL_RAMS[0], // 32GB DDR5 6000MHz Dual
+  ram: INITIAL_RAMS.find(r => r.id === 'ram-corsair-veng-rgb-32-6000') || INITIAL_RAMS[0], // Corsair Vengeance RGB 32GB 6000MHz
   storage: INITIAL_STORAGES[1], // 2TB NVMe Gen4
-  psu: INITIAL_PSUS[7], // 850W 80 PLUS Gold (ATX 3.0)
+  psu: INITIAL_PSUS.find(p => p.id === 'psu-corsair-rm850x-shift') || INITIAL_PSUS[6] || INITIAL_PSUS[0], // Corsair RM850x SHIFT ATX 3.1
   resolution: '1440p',
+  monitorCount: 1,
+  monitorMode: 'gaming_primary',
+  upscalingTech: 'dlss',
+  upscalingMode: 'native',
+  renderScalePct: 100,
   workload: 'gaming',
   workloads: ['gaming'],
   os: 'Windows 11'
@@ -252,6 +259,16 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return true;
   };
 
+  const addOrUpdatePsu = async (psu: PSU): Promise<boolean> => {
+    setPsus(prev => [psu, ...prev.filter(p => p.id !== psu.id)]);
+    return true;
+  };
+
+  const deletePsu = async (id: string): Promise<boolean> => {
+    setPsus(prev => prev.filter(p => p.id !== id));
+    return true;
+  };
+
   return (
     <HardwareContext.Provider
       value={{
@@ -274,7 +291,9 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addOrUpdateGpu,
         deleteGpu,
         addOrUpdateSoc,
-        deleteSoc
+        deleteSoc,
+        addOrUpdatePsu,
+        deletePsu
       }}
     >
       {children}

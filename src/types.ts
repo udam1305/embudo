@@ -1,6 +1,8 @@
 export type WorkloadType = 'gaming' | 'streaming' | 'render3d' | 'video_edit' | 'multitask';
-export type ResolutionType = '1080p' | '1440p' | '4k' | 'ultrawide';
+export type ResolutionType = '1080p' | '1440p' | 'ultrawide' | '4k' | '5k_ultrawide' | '8k';
 export type GraphicPreset = 'low' | 'medium' | 'high' | 'ultra' | 'raytracing';
+export type UpscalingTechnology = 'none' | 'dlss' | 'fsr' | 'xess';
+export type UpscalingMode = 'native' | 'quality' | 'balanced' | 'performance' | 'ultra_performance';
 
 export interface CPU {
   id: string;
@@ -17,6 +19,7 @@ export interface CPU {
   singlecoreScore: number; // 0 - 100
   releaseYear: number;
   pcieGen: number; // 3, 4, 5
+  generation?: string;
   integratedGpu?: string;
   sourceUrl?: string;
 }
@@ -40,6 +43,8 @@ export interface GPU {
 
 export interface RAM {
   id: string;
+  name?: string;
+  brand?: string;
   type: 'DDR4' | 'DDR5' | 'DDR3';
   capacityGb: number;
   speedMhz: number;
@@ -57,9 +62,12 @@ export interface Storage {
 export interface PSU {
   id: string;
   name: string;
+  brand?: 'Corsair' | 'Seasonic' | 'ASUS ROG' | 'be quiet!' | 'MSI' | 'EVGA' | 'Genérica' | string;
   wattage: number;
   efficiency: '80 PLUS White' | '80 PLUS Bronze' | '80 PLUS Silver' | '80 PLUS Gold' | '80 PLUS Platinum' | '80 PLUS Titanium' | 'Genérica';
   tier?: string;
+  modular?: 'Totalmente Modular' | 'Semi-Modular' | 'No Modular';
+  atx3?: boolean;
 }
 
 export interface MobileSoC {
@@ -88,6 +96,13 @@ export interface DiagnosisConfig {
   workload: WorkloadType;
   workloads?: WorkloadType[];
   os: 'Windows 11' | 'Windows 10' | 'Linux' | 'macOS';
+  // Multi-Monitor & Scaling Configuration
+  monitorCount?: number; // 1, 2, 3, 4
+  monitorMode?: 'gaming_primary' | 'surround_span'; // primary game vs spanned surround
+  secondaryResolution?: ResolutionType;
+  upscalingTech?: UpscalingTechnology; // 'none' | 'dlss' | 'fsr' | 'xess'
+  upscalingMode?: UpscalingMode; // 'native' | 'quality' | 'balanced' | 'performance' | 'ultra_performance'
+  renderScalePct?: number; // Internal render percentage, e.g. 100, 67, 58, 50, 33
 }
 
 export interface BottleneckResult {
@@ -101,6 +116,22 @@ export interface BottleneckResult {
     ramSpeedPenaltyPct: number;
     storagePenaltyPct: number;
     recommendedResolution: string;
+  };
+  displayAnalysis?: {
+    totalMonitors: number;
+    mode: 'gaming_primary' | 'surround_span';
+    outputResolutionLabel: string;
+    internalRenderResolutionLabel: string;
+    totalPixelsMegaPixels: number;
+    upscalingActive: boolean;
+    upscalingName: string;
+    renderScalePct: number;
+    vramEstimatedUsageGb: number;
+    vramCapacityGb: number;
+    vramSaturationPct: number;
+    vramAlert?: string;
+    multiMonitorOverheadWatts: number;
+    cableRecommendation: string;
   };
   powerStats: {
     systemEstimatedWatts: number;

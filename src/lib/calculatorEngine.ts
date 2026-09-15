@@ -1,7 +1,85 @@
-import { DiagnosisConfig, BottleneckResult, MobileSoC, MobileDiagnosisResult, WorkloadType } from '../types';
+import { DiagnosisConfig, BottleneckResult, MobileSoC, MobileDiagnosisResult, WorkloadType, ResolutionType, UpscalingMode, UpscalingTechnology } from '../types';
 
 export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
   const { cpu, gpu, ram, storage, resolution, workload } = config;
+
+  // Multi-Monitor & Scaling Configuration
+  const monitorCount = Math.max(1, Math.min(4, config.monitorCount || 1));
+  const monitorMode = config.monitorMode || 'gaming_primary';
+  const upscalingMode: UpscalingMode = config.upscalingMode || 'native';
+  const upscalingTech: UpscalingTechnology = config.upscalingTech || (gpu.brand === 'NVIDIA' ? 'dlss' : gpu.brand === 'AMD' ? 'fsr' : 'xess');
+
+  // Scaling multipliers & render ratios
+  let renderScaleRatio = 1.0;
+  let upscalingName = 'Nativo 100%';
+  let upscalingFpsBoost = 1.0;
+
+  if (upscalingMode === 'quality') {
+    renderScaleRatio = 0.667;
+    upscalingFpsBoost = 1.38;
+    upscalingName = `${upscalingTech.toUpperCase()} Calidad (67% Render)`;
+  } else if (upscalingMode === 'balanced') {
+    renderScaleRatio = 0.58;
+    upscalingFpsBoost = 1.62;
+    upscalingName = `${upscalingTech.toUpperCase()} Equilibrado (58% Render)`;
+  } else if (upscalingMode === 'performance') {
+    renderScaleRatio = 0.50;
+    upscalingFpsBoost = 1.95;
+    upscalingName = `${upscalingTech.toUpperCase()} Rendimiento (50% Render)`;
+  } else if (upscalingMode === 'ultra_performance') {
+    renderScaleRatio = 0.333;
+    upscalingFpsBoost = 2.75;
+    upscalingName = `${upscalingTech.toUpperCase()} Ultra Rendimiento (33% Render - 8K Opt.)`;
+  }
+
+  // Base display specifications
+  let baseWidth = 2560;
+  let baseHeight = 1440;
+  let resolutionLabel = '1440p Quad HD';
+
+  switch (resolution) {
+    case '1080p':
+      baseWidth = 1920;
+      baseHeight = 1080;
+      resolutionLabel = '1080p Full HD (1920x1080)';
+      break;
+    case '1440p':
+      baseWidth = 2560;
+      baseHeight = 1440;
+      resolutionLabel = '1440p Quad HD (2560x1440)';
+      break;
+    case 'ultrawide':
+      baseWidth = 3440;
+      baseHeight = 1440;
+      resolutionLabel = 'Ultrawide UWQHD (3440x1440)';
+      break;
+    case '4k':
+      baseWidth = 3840;
+      baseHeight = 2160;
+      resolutionLabel = '4K Ultra HD (3840x2160)';
+      break;
+    case '5k_ultrawide':
+      baseWidth = 5120;
+      baseHeight = 1440;
+      resolutionLabel = '5K Dual QHD (5120x1440)';
+      break;
+    case '8k':
+      baseWidth = 7680;
+      baseHeight = 4320;
+      resolutionLabel = '8K Ultra HD (7680x4320)';
+      break;
+  }
+
+  // Active rendering dimensions
+  const activeWidth = (monitorMode === 'surround_span' && monitorCount > 1)
+    ? baseWidth * monitorCount
+    : baseWidth;
+  const activeHeight = baseHeight;
+
+  const totalPixelsMegaPixels = Number(((activeWidth * activeHeight) / 1_000_000).toFixed(1));
+  const renderWidth = Math.round(activeWidth * renderScaleRatio);
+  const renderHeight = Math.round(activeHeight * renderScaleRatio);
+  const internalRenderResolutionLabel = `${renderWidth} x ${renderHeight}`;
 
   // 1. Resolution weights (CPU vs GPU balance)
   let cpuWeight = 0.50;
@@ -16,14 +94,34 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
       cpuWeight = 0.35;
       gpuWeight = 0.65;
       break;
-    case '4k':
-      cpuWeight = 0.18;
-      gpuWeight = 0.82;
-      break;
     case 'ultrawide':
       cpuWeight = 0.28;
       gpuWeight = 0.72;
       break;
+    case '4k':
+      cpuWeight = 0.18;
+      gpuWeight = 0.82;
+      break;
+    case '5k_ultrawide':
+      cpuWeight = 0.13;
+      gpuWeight = 0.87;
+      break;
+    case '8k':
+      cpuWeight = 0.07;
+      gpuWeight = 0.93;
+      break;
+  }
+
+  // If heavy upscaling is active, the internal render resolution is lower, shifting work slightly back to CPU
+  if (upscalingMode === 'performance' || upscalingMode === 'ultra_performance') {
+    cpuWeight += 0.08;
+    gpuWeight -= 0.08;
+  }
+
+  // If surround mode across 3-4 monitors, GPU load expands further
+  if (monitorMode === 'surround_span' && monitorCount > 1) {
+    gpuWeight = Math.min(0.95, gpuWeight + 0.08);
+    cpuWeight = Math.max(0.05, 1 - gpuWeight);
   }
 
   // 2. Workload modifier (supports single or multiple selected workloads)
@@ -31,7 +129,11 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
     ? config.workloads
     : [workload || 'gaming'];
 
-  const baseGpuScore = resolution === '4k' ? gpu.score4k : (resolution === '1440p' || resolution === 'ultrawide') ? gpu.score1440p : gpu.score1080p;
+  const baseGpuScore = (resolution === '8k' || resolution === '4k' || resolution === '5k_ultrawide')
+    ? gpu.score4k
+    : (resolution === '1440p' || resolution === 'ultrawide')
+    ? gpu.score1440p
+    : gpu.score1080p;
 
   let totalCpuScore = 0;
   let totalGpuScore = 0;
@@ -66,7 +168,7 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
   }
   if (ram.capacityGb < 16) {
     ramPenaltyPct += 18;
-  } else if (ram.capacityGb < 32 && (resolution === '4k' || activeWorkloads.some(w => w === 'render3d' || w === 'video_edit' || w === 'multitask'))) {
+  } else if (ram.capacityGb < 32 && (resolution === '4k' || resolution === '5k_ultrawide' || resolution === '8k' || activeWorkloads.some(w => w === 'render3d' || w === 'video_edit' || w === 'multitask') || monitorCount > 1)) {
     ramPenaltyPct += 6;
   }
   if (ram.type === 'DDR4' && ram.speedMhz < 3200) {
@@ -85,13 +187,51 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
   const ramFactor = Math.max(0.70, 1 - (ramPenaltyPct / 100));
   const penalizedCpuPower = effectiveCpuScore * ramFactor;
 
-  // Compute Delta between CPU capabilities and GPU capabilities for this resolution
-  // If CPU power is lower than what GPU demands, CPU bottlenecks GPU
-  // If GPU power is lower, GPU is at 100% (desired in high res gaming)
+  // 5. VRAM Estimation & Saturation Check
+  let baseVramGb = 7.0;
+  if (resolution === '1080p') baseVramGb = 6.2;
+  else if (resolution === '1440p') baseVramGb = 9.2;
+  else if (resolution === 'ultrawide') baseVramGb = 10.5;
+  else if (resolution === '4k') baseVramGb = 13.8;
+  else if (resolution === '5k_ultrawide') baseVramGb = 14.8;
+  else if (resolution === '8k') baseVramGb = 22.5;
+
+  // Upscaling reduces frame buffer rendering allocation
+  if (upscalingMode === 'quality') baseVramGb *= 0.90;
+  else if (upscalingMode === 'balanced') baseVramGb *= 0.82;
+  else if (upscalingMode === 'performance') baseVramGb *= 0.72;
+  else if (upscalingMode === 'ultra_performance') baseVramGb *= 0.58;
+
+  // Multi-monitor overhead
+  let multiMonitorVramOverhead = 0;
+  if (monitorCount > 1) {
+    if (monitorMode === 'surround_span') {
+      multiMonitorVramOverhead = (monitorCount - 1) * 2.5;
+    } else {
+      multiMonitorVramOverhead = (monitorCount - 1) * 0.7; // DWM + Hardware accelerated browsers
+    }
+  }
+
+  const vramEstimatedUsageGb = Number((baseVramGb + multiMonitorVramOverhead).toFixed(1));
+  const vramCapacityGb = gpu.vram;
+  const vramSaturationPct = Math.round((vramEstimatedUsageGb / vramCapacityGb) * 100);
+
+  let vramAlert: string | undefined = undefined;
+  let vramPenaltyBottleneck = 0;
+
+  if (vramSaturationPct > 105) {
+    vramPenaltyBottleneck = Math.min(45, Math.round((vramSaturationPct - 100) * 0.6));
+    vramAlert = `⚠️ Sobresaturación de VRAM: Tu ensamble demanda ~${vramEstimatedUsageGb}GB y la ${gpu.name} dispone de ${vramCapacityGb}GB. El desbordamiento a la RAM del sistema provocará micro-tirones severos (stuttering). Activa escalado (${gpu.brand === 'NVIDIA' ? 'DLSS' : 'FSR'} Rendimiento/Ultra) o reduce resolución.`;
+  }
+
+  // Compute Delta between CPU and GPU
   let rawBottleneck = 0;
   let limitingFactor: 'CPU' | 'GPU' | 'RAM' | 'Storage' | 'Equilibrado' = 'Equilibrado';
 
-  if (ramPenaltyPct >= 15) {
+  if (vramSaturationPct > 115) {
+    limitingFactor = 'GPU';
+    rawBottleneck = Math.max(vramPenaltyBottleneck, 25);
+  } else if (ramPenaltyPct >= 15) {
     limitingFactor = 'RAM';
     rawBottleneck = ramPenaltyPct;
   } else if (storagePenaltyPct >= 15) {
@@ -99,11 +239,10 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
     rawBottleneck = storagePenaltyPct;
   } else if (penalizedCpuPower < effectiveGpuScore * 0.90) {
     limitingFactor = 'CPU';
-    // CPU cannot feed GPU: bottleneck is proportion of GPU untapped
     rawBottleneck = Math.min(65, Math.round(((effectiveGpuScore - penalizedCpuPower) / effectiveGpuScore) * 100 * cpuWeight * 1.8));
-  } else if (effectiveGpuScore < penalizedCpuPower * 0.75 && resolution === '4k') {
+  } else if (effectiveGpuScore < penalizedCpuPower * 0.75 && (resolution === '4k' || resolution === '8k' || resolution === '5k_ultrawide')) {
     limitingFactor = 'GPU';
-    rawBottleneck = Math.min(25, Math.round(((penalizedCpuPower - effectiveGpuScore) / penalizedCpuPower) * 100 * 0.3));
+    rawBottleneck = Math.min(30, Math.round(((penalizedCpuPower - effectiveGpuScore) / penalizedCpuPower) * 100 * 0.35));
   } else {
     limitingFactor = 'Equilibrado';
     rawBottleneck = Math.max(1, Math.round(Math.abs(penalizedCpuPower - effectiveGpuScore) * 0.15));
@@ -120,22 +259,31 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
 
   // Summary message
   let summary = '';
-  if (severity === 'perfect') {
-    summary = `¡Excelente balance! Tu combinación de ${cpu.name} y ${gpu.name} en ${resolution.toUpperCase()} está prácticamente libre de cuello de botella (${bottleneckPct}%). Los componentes se complementan con máxima eficiencia.`;
+  const monitorInfoText = monitorCount > 1
+    ? ` en configuración de ${monitorCount} monitores (${monitorMode === 'surround_span' ? 'Surround extendido' : 'Multitarea'})`
+    : '';
+
+  if (vramAlert) {
+    summary = `${vramAlert}`;
+  } else if (severity === 'perfect') {
+    summary = `¡Excelente balance! Tu combinación de ${cpu.name} y ${gpu.name} en ${resolution.toUpperCase()}${monitorInfoText} está prácticamente libre de cuello de botella (${bottleneckPct}%).`;
   } else if (limitingFactor === 'CPU') {
-    summary = `Se detecta un cuello de botella por procesador del ${bottleneckPct}%. En ${resolution.toUpperCase()}, la ${gpu.name} tiene más potencial gráfico del que el ${cpu.name} puede procesar en cuadros por segundo.`;
+    summary = `Se detecta un cuello de botella por procesador del ${bottleneckPct}%. En ${resolution.toUpperCase()}${monitorInfoText}, la ${gpu.name} tiene más potencial gráfico del que el ${cpu.name} puede procesar en cuadros por segundo.`;
   } else if (limitingFactor === 'RAM') {
     summary = `Se detecta limitación por memoria RAM (${ram.capacityGb}GB ${ram.type} en modo ${ram.channels === 'single' ? 'Single-Channel' : 'Dual-Channel'}). La falta de ancho de banda genera caídas de cuadros (stuttering).`;
   } else if (limitingFactor === 'Storage') {
     summary = `El almacenamiento (${storage.type}) ralentiza el streaming de texturas y los tiempos de carga en títulos modernos con DirectStorage.`;
   } else {
-    summary = `Balance adecuado con un ligero margen de ${bottleneckPct}% orientado a GPU bound, ideal para resoluciones altas.`;
+    summary = `Balance adecuado con un ligero margen de ${bottleneckPct}% orientado a GPU bound, ideal para ${resolution.toUpperCase()}${monitorInfoText}.`;
   }
+
+  // Multi-monitor overhead watts
+  const multiMonitorOverheadWatts = monitorCount > 1 ? (monitorCount - 1) * 15 : 0;
 
   // Power & PSU calculations
   const cpuPeak = Math.round(cpu.tdp * 1.28);
   const gpuPeak = Math.round(gpu.tdp * 1.25);
-  const sysOtherWatts = 70 + (ram.channels === 'dual' ? 16 : 8);
+  const sysOtherWatts = 70 + (ram.channels === 'dual' ? 16 : 8) + multiMonitorOverheadWatts;
   const systemEstimatedWatts = cpuPeak + gpuPeak + sysOtherWatts;
   const peakSurgeWatts = Math.round(systemEstimatedWatts * 1.20);
   
@@ -178,9 +326,38 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
     };
   }
 
-  // 5. FPS Estimates in Top Games
-  // Base GPU performance factor
-  const gpuBaseFps = (gpu.score1440p * 1.45) * (resolution === '1080p' ? 1.40 : resolution === '1440p' ? 1.0 : resolution === 'ultrawide' ? 0.85 : 0.62);
+  // 6. Cable and Bandwidth Recommendation
+  let cableRecommendation = 'DisplayPort 1.4a o HDMI 2.0 (Hasta 1440p / 144Hz)';
+  if (resolution === '8k' || totalPixelsMegaPixels >= 25) {
+    cableRecommendation = 'DisplayPort 2.1 (UHBR20 / 80Gbps) o HDMI 2.1 (48Gbps con DSC nativo para 8K HDR 120Hz)';
+  } else if (resolution === '4k' || resolution === '5k_ultrawide') {
+    cableRecommendation = 'DisplayPort 1.4a con DSC o HDMI 2.1 para 4K a 144Hz / 240Hz';
+  } else if (monitorCount >= 3) {
+    cableRecommendation = `Requiere GPU con al menos ${monitorCount} salidas digitales (${monitorCount}x DP 1.4a/2.1 + HDMI 2.1)`;
+  }
+
+  // 7. FPS Estimates in Top Games with Scaling & Multi-Monitor Impact
+  let resolutionFpsMult = 1.0;
+  if (resolution === '1080p') resolutionFpsMult = 1.40;
+  else if (resolution === '1440p') resolutionFpsMult = 1.00;
+  else if (resolution === 'ultrawide') resolutionFpsMult = 0.82;
+  else if (resolution === '4k') resolutionFpsMult = 0.58;
+  else if (resolution === '5k_ultrawide') resolutionFpsMult = 0.48;
+  else if (resolution === '8k') resolutionFpsMult = 0.18; // 33.2 Million pixels!
+
+  // Surround mode multiplier
+  let surroundFpsFactor = 1.0;
+  if (monitorMode === 'surround_span' && monitorCount > 1) {
+    surroundFpsFactor = 1 / Math.pow(monitorCount, 0.85);
+  } else if (monitorCount > 1) {
+    // Primary mode has slight background DWM and video playback penalty
+    surroundFpsFactor = 1 - (monitorCount - 1) * 0.035;
+  }
+
+  // VRAM penalty on FPS if saturating
+  const vramFpsFactor = vramSaturationPct > 105 ? Math.max(0.40, 1 - (vramSaturationPct - 100) * 0.015) : 1.0;
+
+  const gpuBaseFps = (gpu.score1440p * 1.45) * resolutionFpsMult * upscalingFpsBoost * surroundFpsFactor * vramFpsFactor;
   const cpuFactor = Math.min(1.0, penalizedCpuPower / (resolution === '1080p' ? 95 : 85));
 
   const gamePresets = [
@@ -197,22 +374,34 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
     const low = Math.round(med * 1.35);
     const ultra = Math.round(med * 0.78);
     const rt = Math.round(med * (g.rtMult / g.mult) * (gpu.rayTracingScore / 90));
-    const onePctLow = Math.round(ultra * (ram.channels === 'single' ? 0.62 : 0.88));
+    const onePctLow = Math.round(ultra * (ram.channels === 'single' ? 0.62 : 0.88) * (vramSaturationPct > 105 ? 0.55 : 1.0));
 
     return {
       game: g.name,
-      lowFps: Math.max(25, low),
-      medFps: Math.max(20, med),
-      ultraFps: Math.max(15, ultra),
-      rtFps: Math.max(10, rt),
-      onePercentLow: Math.max(10, onePctLow)
+      lowFps: Math.max(10, low),
+      medFps: Math.max(8, med),
+      ultraFps: Math.max(5, ultra),
+      rtFps: Math.max(4, rt),
+      onePercentLow: Math.max(3, onePctLow)
     };
   });
 
-  // 6. Driver and OS advice
+  // 8. Driver and OS advice
   const driverAdvice: string[] = [];
+  if (resolution === '8k') {
+    driverAdvice.push('🖥️ CONFIGURACIÓN 8K: Para jugar en 8K a más de 60 FPS estables, se recomienda imperativamente activar DLSS o FSR en modo "Rendimiento" o "Ultra Rendimiento" con Frame Generation activo.');
+  }
+
+  if (monitorCount > 1) {
+    if (monitorMode === 'surround_span') {
+      driverAdvice.push(`Configura ${gpu.brand === 'NVIDIA' ? 'NVIDIA Surround' : 'AMD Eyefinity'} en el panel de control gráfico para unificar las ${monitorCount} pantallas en un único lienzo panorámico.`);
+    } else {
+      driverAdvice.push(`Con ${monitorCount} monitores en multitarea, activa "Aceleración por hardware" en Discord y Chrome para descargar a la CPU.`);
+    }
+  }
+
   if (gpu.brand === 'NVIDIA') {
-    driverAdvice.push(`Instala el último controlador NVIDIA GeForce Game Ready Driver (570.xx+) con soporte para ${gpu.dlssFsrSupport}.`);
+    driverAdvice.push(`Instala el controlador NVIDIA GeForce Game Ready Driver (570.xx+) con soporte para ${gpu.dlssFsrSupport}.`);
     driverAdvice.push('Activa "NVIDIA Reflex Low Latency" en modo On+Boost en el panel de control para reducir latencia del sistema.');
   } else if (gpu.brand === 'AMD') {
     driverAdvice.push(`Mantén actualizado AMD Software: Adrenalin Edition con soporte para ${gpu.dlssFsrSupport} y HYPR-RX.`);
@@ -232,7 +421,7 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
     driverAdvice.push('En Windows 11, activa la "Programación de GPU acelerada por hardware" (HAGS) y desactiva el aislamiento del núcleo (VBS) si buscas el máximo rendimiento en juegos.');
   }
 
-  // 7. Upgrade Recommendations
+  // 9. Upgrade Recommendations
   const upgradeRecommendations: Array<{
     priority: number;
     componentType: 'CPU' | 'GPU' | 'RAM' | 'Almacenamiento' | 'Fuente';
@@ -241,11 +430,21 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
     reason: string;
   }> = [];
 
+  if (vramSaturationPct > 105) {
+    upgradeRecommendations.unshift({
+      priority: 1,
+      componentType: 'GPU',
+      suggestedItem: gpu.brand === 'NVIDIA' ? 'NVIDIA GeForce RTX 5090 (32GB GDDR7) o RTX 5080 (16GB)' : 'AMD Radeon RX 7900 XTX (24GB GDDR6)',
+      gainPercentage: 45,
+      reason: `Resolución ${resolution.toUpperCase()} y setup multimonitor requieren al menos ${vramEstimatedUsageGb}GB de VRAM. Tu tarjeta actual (${gpu.vram}GB) satura su memoria.`
+    });
+  }
+
   if (ram.channels === 'single' || ram.capacityGb < 32) {
     upgradeRecommendations.push({
-      priority: 1,
+      priority: 2,
       componentType: 'RAM',
-      suggestedItem: 'Kit 32GB (2x16GB) DDR5 6000MHz CL30 (o DDR4 3600 CL16)',
+      suggestedItem: 'Kit 32GB (2x16GB) DDR5 6000MHz CL30 Corsair Vengeance / Dominator',
       gainPercentage: ram.channels === 'single' ? 22 : 12,
       reason: 'Elimina el cuello de botella por ancho de banda de memoria y estabiliza caídas de FPS.'
     });
@@ -253,7 +452,7 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
 
   if (limitingFactor === 'CPU' && bottleneckPct >= 15) {
     upgradeRecommendations.push({
-      priority: 2,
+      priority: 3,
       componentType: 'CPU',
       suggestedItem: cpu.brand === 'AMD' ? 'AMD Ryzen 7 7800X3D o 9800X3D (AM5)' : 'Intel Core i7-14700K / Core Ultra 7',
       gainPercentage: Math.round(bottleneckPct * 0.9),
@@ -263,7 +462,7 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
 
   if (storage.type === 'HDD' || storage.type === 'SATA SSD') {
     upgradeRecommendations.push({
-      priority: 3,
+      priority: 4,
       componentType: 'Almacenamiento',
       suggestedItem: 'M.2 NVMe PCIe 4.0 2TB (7000+ MB/s)',
       gainPercentage: 15,
@@ -275,15 +474,15 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
     upgradeRecommendations.unshift({
       priority: 1,
       componentType: 'Fuente',
-      suggestedItem: `Fuente ${recommendedPsuWatts}W 80 PLUS Gold (ATX 3.0 / PCIe 5.0)`,
+      suggestedItem: `Fuente Corsair RM${recommendedPsuWatts}x SHIFT 80+ Gold (ATX 3.1)`,
       gainPercentage: 0,
       reason: `Tu fuente actual (${userPsu.wattage}W) está por debajo del pico transitorio de ${peakSurgeWatts}W. Requiere actualización prioritaria para evitar reinicios o apagados súbitos.`
     });
   } else if (!userPsu && systemEstimatedWatts > gpu.recommendedPsu * 0.85) {
     upgradeRecommendations.push({
-      priority: 4,
+      priority: 5,
       componentType: 'Fuente',
-      suggestedItem: `Fuente ${recommendedPsuWatts}W 80 PLUS Gold Modular`,
+      suggestedItem: `Fuente Corsair RM${recommendedPsuWatts}x SHIFT 80+ Gold Modular`,
       gainPercentage: 5,
       reason: 'Garantiza estabilidad ante picos transitorios (transient spikes) y protege tus componentes.'
     });
@@ -299,7 +498,23 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
       gpuLoadEst: Math.min(100, Math.round((penalizedCpuPower / (effectiveGpuScore + 0.1)) * 50 + (100 - effectiveGpuScore * 0.3))),
       ramSpeedPenaltyPct: ramPenaltyPct,
       storagePenaltyPct: storagePenaltyPct,
-      recommendedResolution: resolution === '1080p' && penalizedCpuPower < effectiveGpuScore ? '1440p (traslada carga a la GPU)' : resolution
+      recommendedResolution: resolution === '8k' ? '8K con DLSS/FSR Rendimiento o 4K Nativo' : resolution === '1080p' && penalizedCpuPower < effectiveGpuScore ? '1440p (traslada carga a la GPU)' : resolution
+    },
+    displayAnalysis: {
+      totalMonitors: monitorCount,
+      mode: monitorMode,
+      outputResolutionLabel: resolutionLabel,
+      internalRenderResolutionLabel,
+      totalPixelsMegaPixels,
+      upscalingActive: upscalingMode !== 'native',
+      upscalingName,
+      renderScalePct: Math.round(renderScaleRatio * 100),
+      vramEstimatedUsageGb,
+      vramCapacityGb,
+      vramSaturationPct,
+      vramAlert,
+      multiMonitorOverheadWatts,
+      cableRecommendation
     },
     powerStats: {
       systemEstimatedWatts,
