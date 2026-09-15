@@ -33,7 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const navItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'pc-diag', label: 'Diagnóstico PC', icon: Cpu },
+    { id: 'pc-diag', label: 'Diagnóstico PC & Laptop', icon: Cpu },
     { id: 'calculators', label: 'Calculadoras', icon: Calculator },
     { id: 'comparator', label: 'Comparador PC', icon: Scale },
     { id: 'smartphones', label: 'Smartphones', icon: Smartphone },

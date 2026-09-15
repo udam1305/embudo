@@ -2,15 +2,63 @@ import { GPU } from '../types';
 
 export interface GpuGenerationMeta {
   id: string;
-  brand: 'NVIDIA' | 'AMD' | 'Intel';
+  brand: 'NVIDIA' | 'AMD' | 'Intel' | 'Apple';
   label: string;
   shortLabel: string;
   architecture: string;
   order: number;
+  isLaptop?: boolean;
 }
 
 export const KNOWN_GPU_GENERATIONS: GpuGenerationMeta[] = [
-  // --- NVIDIA (Chronological recent to older) ---
+  // --- Laptop Mobile GPUs ---
+  {
+    id: 'nv-rtx40-laptop',
+    brand: 'NVIDIA',
+    label: 'GeForce RTX 40 Mobile (Ada Lovelace Laptop GPU)',
+    shortLabel: 'RTX 40 Laptop (Ada)',
+    architecture: 'Ada Lovelace Mobile',
+    order: 2.5,
+    isLaptop: true
+  },
+  {
+    id: 'nv-rtx30-laptop',
+    brand: 'NVIDIA',
+    label: 'GeForce RTX 30 Mobile (Ampere Laptop GPU)',
+    shortLabel: 'RTX 30 Laptop (Ampere)',
+    architecture: 'Ampere Mobile',
+    order: 3.5,
+    isLaptop: true
+  },
+  {
+    id: 'amd-mobile-gpu',
+    brand: 'AMD',
+    label: 'Radeon Mobile & iGPU RDNA (890M / 780M / RX 7000M)',
+    shortLabel: 'Radeon Mobile (RDNA 3/3.5)',
+    architecture: 'RDNA 3 / 3.5 Mobile',
+    order: 7.5,
+    isLaptop: true
+  },
+  {
+    id: 'intel-mobile-gpu',
+    brand: 'Intel',
+    label: 'Intel Arc Xe2 & Iris Xe Mobile (Lunar Lake / Meteor Lake)',
+    shortLabel: 'Intel Arc Mobile (Xe/Xe2)',
+    architecture: 'Xe / Xe2 Battlemage Mobile',
+    order: 13.5,
+    isLaptop: true
+  },
+  {
+    id: 'apple-silicon-gpu',
+    brand: 'Apple',
+    label: 'Apple Silicon GPU (Metal 3 • M1 / M2 / M3)',
+    shortLabel: 'Apple Silicon GPU',
+    architecture: 'Apple GPU Architecture',
+    order: 14,
+    isLaptop: true
+  },
+
+  // --- NVIDIA Desktop (Chronological recent to older) ---
   {
     id: 'nv-rtx50',
     brand: 'NVIDIA',
@@ -115,46 +163,79 @@ export function getGpuGenerationMeta(gpu: GPU): GpuGenerationMeta {
   const name = gpu.name.toUpperCase();
   const id = gpu.id.toLowerCase();
   const brand = gpu.brand;
+  const isLap = gpu.platform === 'laptop' || gpu.isLaptop || name.includes('LAPTOP') || name.includes('MOBILE') || name.includes('MAX-Q') || id.includes('laptop');
+
+  // Apple Silicon GPU
+  if (brand === 'Apple' || name.includes('APPLE') || name.includes('M1') || name.includes('M2') || name.includes('M3') || name.includes('M4')) {
+    return KNOWN_GPU_GENERATIONS.find(g => g.id === 'apple-silicon-gpu')!;
+  }
+
+  // Laptop specific GPUs
+  if (isLap) {
+    if (brand === 'NVIDIA') {
+      if (name.includes('4090') || name.includes('4080') || name.includes('4070') || name.includes('4060') || name.includes('4050')) {
+        return KNOWN_GPU_GENERATIONS.find(g => g.id === 'nv-rtx40-laptop')!;
+      }
+      if (name.includes('3080') || name.includes('3070') || name.includes('3060') || name.includes('3050')) {
+        return KNOWN_GPU_GENERATIONS.find(g => g.id === 'nv-rtx30-laptop')!;
+      }
+    }
+    if (brand === 'AMD' || name.includes('RADEON') || name.includes('890M') || name.includes('780M') || name.includes('760M') || name.includes('680M') || name.includes('7600M')) {
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'amd-mobile-gpu')!;
+    }
+    if (brand === 'Intel' || name.includes('ARC 140V') || name.includes('ARC 130V') || name.includes('IRIS XE')) {
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'intel-mobile-gpu')!;
+    }
+  }
 
   if (brand === 'NVIDIA') {
     if (name.includes('RTX 50') || id.includes('5090') || id.includes('5080') || id.includes('5070') || id.includes('5060')) {
-      return KNOWN_GPU_GENERATIONS[0]; // nv-rtx50
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'nv-rtx50')!;
     }
     if (name.includes('RTX 40') || id.includes('4090') || id.includes('4080') || id.includes('4070') || id.includes('4060')) {
-      return KNOWN_GPU_GENERATIONS[1]; // nv-rtx40
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'nv-rtx40')!;
     }
     if (name.includes('RTX 30') || id.includes('3090') || id.includes('3080') || id.includes('3070') || id.includes('3060') || id.includes('3050')) {
-      return KNOWN_GPU_GENERATIONS[2]; // nv-rtx30
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'nv-rtx30')!;
     }
     if (name.includes('RTX 20') || id.includes('2080') || id.includes('2070') || id.includes('2060')) {
-      return KNOWN_GPU_GENERATIONS[3]; // nv-rtx20
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'nv-rtx20')!;
     }
     if (name.includes('GTX 16') || id.includes('1660') || id.includes('1650') || id.includes('1630')) {
-      return KNOWN_GPU_GENERATIONS[4]; // nv-gtx16
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'nv-gtx16')!;
     }
     if (name.includes('GTX 10') || id.includes('1080') || id.includes('1070') || id.includes('1060') || id.includes('1050')) {
-      return KNOWN_GPU_GENERATIONS[5]; // nv-gtx10
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'nv-gtx10')!;
     }
   }
 
   if (brand === 'AMD') {
+    if (name.includes('890M') || name.includes('780M') || name.includes('7600M')) {
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'amd-mobile-gpu')!;
+    }
     if (name.includes('RX 7') || id.includes('7900') || id.includes('7800') || id.includes('7700') || id.includes('7600')) {
-      return KNOWN_GPU_GENERATIONS[6]; // amd-rx7000
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'amd-rx7000')!;
     }
     if (name.includes('RX 6') || id.includes('6950') || id.includes('6900') || id.includes('6800') || id.includes('6750') || id.includes('6700') || id.includes('6650') || id.includes('6600') || id.includes('6500') || id.includes('6400')) {
-      return KNOWN_GPU_GENERATIONS[7]; // amd-rx6000
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'amd-rx6000')!;
     }
     if (name.includes('RX 5700') || name.includes('RX 5600') || name.includes('RX 5500') || id.includes('5700') || id.includes('5600') || id.includes('5500')) {
-      return KNOWN_GPU_GENERATIONS[8]; // amd-rx5000
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'amd-rx5000')!;
     }
     if (name.includes('VEGA') || name.includes('VII') || id.includes('vega') || id.includes('vii')) {
-      return KNOWN_GPU_GENERATIONS[9]; // amd-vega-vii
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'amd-vega-vii')!;
     }
     if (name.includes('RX 590') || name.includes('RX 580') || name.includes('RX 570') || name.includes('RX 560') || name.includes('RX 550') || id.includes('590') || id.includes('580') || id.includes('570') || id.includes('560') || id.includes('550')) {
-      return KNOWN_GPU_GENERATIONS[10]; // amd-rx500
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'amd-rx500')!;
     }
     if (name.includes('RX 480') || name.includes('RX 470') || name.includes('RX 460') || id.includes('480') || id.includes('470') || id.includes('460')) {
-      return KNOWN_GPU_GENERATIONS[11]; // amd-rx400
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'amd-rx400')!;
+    }
+  }
+
+  if (brand === 'Intel') {
+    if (name.includes('140V') || name.includes('130V') || name.includes('IRIS')) {
+      return KNOWN_GPU_GENERATIONS.find(g => g.id === 'intel-mobile-gpu')!;
     }
   }
 
@@ -173,7 +254,7 @@ export interface GpuGroup {
   id: string;
   label: string;
   shortLabel: string;
-  brand: 'NVIDIA' | 'AMD' | 'Intel';
+  brand: 'NVIDIA' | 'AMD' | 'Intel' | 'Apple';
   order: number;
   gpus: GPU[];
 }

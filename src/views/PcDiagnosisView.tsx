@@ -22,7 +22,10 @@ import {
   ChevronDown,
   Tv,
   Maximize2,
-  LayoutGrid
+  LayoutGrid,
+  Laptop,
+  BatteryCharging,
+  Thermometer
 } from 'lucide-react';
 import { useHardware } from '../context/HardwareContext';
 import { useAuth } from '../context/AuthContext';
@@ -39,12 +42,47 @@ export const PcDiagnosisView: React.FC = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  // Platform selection (Desktop PC vs Notebook/Laptop vs All)
+  const isCurrentLaptop = Boolean(
+    currentConfig.platform === 'laptop' ||
+    currentConfig.cpu.platform === 'laptop' ||
+    currentConfig.cpu.isLaptop
+  );
+  const [platformMode, setPlatformMode] = useState<'all' | 'desktop' | 'laptop'>(
+    isCurrentLaptop ? 'laptop' : 'desktop'
+  );
+
+  const handleSwitchPlatform = (targetPlatform: 'desktop' | 'laptop') => {
+    setPlatformMode(targetPlatform);
+    if (targetPlatform === 'laptop') {
+      const bestLaptopCpu = cpus.find(c => c.id === 'cpu-lap-r9-ai-hx370') || cpus.find(c => c.platform === 'laptop' || c.isLaptop) || cpus[0];
+      const bestLaptopGpu = gpus.find(g => g.id === 'gpu-lap-4080') || gpus.find(g => g.platform === 'laptop' || g.isLaptop) || gpus[0];
+      const laptopPsu = psus.find(p => p.id === 'psu-lap-280w-slim') || psus.find(p => p.brand === 'Laptop Original') || psus[0];
+      updateConfig({
+        platform: 'laptop',
+        cpu: bestLaptopCpu,
+        gpu: bestLaptopGpu,
+        psu: laptopPsu
+      });
+    } else {
+      const bestDesktopCpu = cpus.find(c => c.id === 'cpu-7800x3d') || cpus.find(c => c.platform !== 'laptop' && !c.isLaptop) || cpus[0];
+      const bestDesktopGpu = gpus.find(g => g.id === 'gpu-5070ti') || gpus.find(g => g.platform !== 'laptop' && !g.isLaptop) || gpus[0];
+      const desktopPsu = psus.find(p => p.id === 'psu-corsair-rm850x-shift') || psus[0];
+      updateConfig({
+        platform: 'desktop',
+        cpu: bestDesktopCpu,
+        gpu: bestDesktopGpu,
+        psu: desktopPsu
+      });
+    }
+  };
+
   // Search and dropdown filter states
   const [cpuSearch, setCpuSearch] = useState('');
   const [gpuSearch, setGpuSearch] = useState('');
-  const [cpuFilterBrand, setCpuFilterBrand] = useState<'All' | 'AMD' | 'Intel'>('All');
+  const [cpuFilterBrand, setCpuFilterBrand] = useState<'All' | 'AMD' | 'Intel' | 'Apple'>('All');
   const [cpuFilterGen, setCpuFilterGen] = useState<string>('All');
-  const [gpuFilterBrand, setGpuFilterBrand] = useState<'All' | 'NVIDIA' | 'AMD'>('All');
+  const [gpuFilterBrand, setGpuFilterBrand] = useState<'All' | 'NVIDIA' | 'AMD' | 'Apple'>('All');
   const [gpuFilterGen, setGpuFilterGen] = useState<string>('All');
 
   // Available CPU generations based on brand filter
@@ -63,9 +101,21 @@ export const PcDiagnosisView: React.FC = () => {
       const matchBrand = cpuFilterBrand === 'All' || c.brand === cpuFilterBrand;
       const genMeta = getCpuGenerationMeta(c);
       const matchGen = cpuFilterGen === 'All' || genMeta.id === cpuFilterGen;
-      return matchSearch && matchBrand && matchGen;
+      
+      const cIsLaptop = Boolean(
+        c.platform === 'laptop' ||
+        c.isLaptop ||
+        genMeta.isLaptop ||
+        c.socket.includes('BGA') ||
+        c.socket.includes('FP') ||
+        c.socket.includes('FL1') ||
+        c.socket.includes('Apple')
+      );
+      const matchPlatform = platformMode === 'all' ? true : platformMode === 'laptop' ? cIsLaptop : !cIsLaptop;
+
+      return matchSearch && matchBrand && matchGen && matchPlatform;
     });
-  }, [cpus, cpuSearch, cpuFilterBrand, cpuFilterGen]);
+  }, [cpus, cpuSearch, cpuFilterBrand, cpuFilterGen, platformMode]);
 
   // Grouped and sorted by generation
   const cpuGroups = useMemo(() => {
@@ -91,9 +141,21 @@ export const PcDiagnosisView: React.FC = () => {
       const matchBrand = gpuFilterBrand === 'All' || g.brand === gpuFilterBrand;
       const genMeta = getGpuGenerationMeta(g);
       const matchGen = gpuFilterGen === 'All' || genMeta.id === gpuFilterGen;
-      return matchSearch && matchBrand && matchGen;
+
+      const gIsLaptop = Boolean(
+        g.platform === 'laptop' ||
+        g.isLaptop ||
+        genMeta.isLaptop ||
+        g.name.toLowerCase().includes('laptop') ||
+        g.name.toLowerCase().includes('mobile') ||
+        g.id.startsWith('gpu-lap-') ||
+        g.id.startsWith('gpu-apple-')
+      );
+      const matchPlatform = platformMode === 'all' ? true : platformMode === 'laptop' ? gIsLaptop : !gIsLaptop;
+
+      return matchSearch && matchBrand && matchGen && matchPlatform;
     });
-  }, [gpus, gpuSearch, gpuFilterBrand, gpuFilterGen]);
+  }, [gpus, gpuSearch, gpuFilterBrand, gpuFilterGen, platformMode]);
 
   // Grouped and sorted GPUs by generation
   const gpuGroups = useMemo(() => {
@@ -197,6 +259,71 @@ export const PcDiagnosisView: React.FC = () => {
         {/* --- LEFT COLUMN: COMPONENT PICKERS (5 cols) --- */}
         <div className="lg:col-span-5 space-y-5">
           
+          {/* Platform / Form Factor Selector: Desktop PC vs Notebook/Laptop */}
+          <div className="bg-[#151921] border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-cyan-400" /> TIPO DE SISTEMA / PLATAFORMA
+              </label>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                platformMode === 'laptop'
+                  ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                  : platformMode === 'desktop'
+                  ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                  : 'bg-slate-800 text-slate-300 border-slate-700'
+              }`}>
+                {platformMode === 'laptop' ? '💻 Portátil / Notebook' : platformMode === 'desktop' ? '🖥️ Torre / Sobremesa' : '⚡ Todo el Catálogo'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                id="diag-platform-desktop"
+                type="button"
+                onClick={() => handleSwitchPlatform('desktop')}
+                className={`py-2 px-2 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                  platformMode === 'desktop'
+                    ? 'bg-cyan-500/15 border-cyan-500 text-cyan-300 font-bold shadow-sm shadow-cyan-500/10'
+                    : 'bg-[#1C222D] border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600'
+                }`}
+              >
+                <Monitor className="w-4 h-4" />
+                <span className="text-xs font-semibold">PC Torre</span>
+                <span className="text-[9px] text-slate-400 font-normal">Sobremesa</span>
+              </button>
+
+              <button
+                id="diag-platform-laptop"
+                type="button"
+                onClick={() => handleSwitchPlatform('laptop')}
+                className={`py-2 px-2 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                  platformMode === 'laptop'
+                    ? 'bg-purple-500/20 border-purple-500 text-purple-300 font-bold shadow-sm shadow-purple-500/10'
+                    : 'bg-[#1C222D] border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600'
+                }`}
+              >
+                <Laptop className="w-4 h-4" />
+                <span className="text-xs font-semibold">Notebook</span>
+                <span className="text-[9px] text-slate-400 font-normal">Laptop Portátil</span>
+              </button>
+
+              <button
+                id="diag-platform-all"
+                type="button"
+                onClick={() => setPlatformMode('all')}
+                className={`py-2 px-2 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                  platformMode === 'all'
+                    ? 'bg-slate-700/60 border-slate-500 text-white font-bold'
+                    : 'bg-[#1C222D] border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600'
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                <span className="text-xs font-semibold">Ambos</span>
+                <span className="text-[9px] text-slate-400 font-normal">Ver Todos</span>
+              </button>
+            </div>
+          </div>
+
           {/* CPU Selection Card */}
           <div className="bg-[#151921] border border-slate-800 rounded-2xl p-5 shadow-lg">
             <div className="flex items-center justify-between mb-3">
@@ -204,7 +331,7 @@ export const PcDiagnosisView: React.FC = () => {
                 <Cpu className="w-4 h-4 text-cyan-400" /> PROCESADOR (CPU)
               </label>
               <div className="flex items-center gap-1 text-[11px]">
-                {(['All', 'AMD', 'Intel'] as const).map(b => (
+                {(['All', 'AMD', 'Intel', 'Apple'] as const).map(b => (
                   <button
                     key={b}
                     onClick={() => {
@@ -272,6 +399,11 @@ export const PcDiagnosisView: React.FC = () => {
                 <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-300 font-bold border border-cyan-500/20 text-[10px]">
                   {currentCpuMeta.shortLabel}
                 </span>
+                {(currentConfig.cpu.isLaptop || currentConfig.cpu.platform === 'laptop' || currentCpuMeta.isLaptop) && (
+                  <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 font-bold border border-purple-500/30 text-[10px] flex items-center gap-1">
+                    <Laptop className="w-2.5 h-2.5" /> Laptop
+                  </span>
+                )}
                 <span className="text-slate-500">•</span>
                 <span className="font-mono text-slate-300">{currentConfig.cpu.socket}</span>
                 <span className="text-slate-500">•</span>
@@ -294,7 +426,7 @@ export const PcDiagnosisView: React.FC = () => {
                 <Monitor className="w-4 h-4 text-blue-400" /> TARJETA GRÁFICA (GPU)
               </label>
               <div className="flex items-center gap-1 text-[11px]">
-                {(['All', 'NVIDIA', 'AMD'] as const).map(b => (
+                {(['All', 'NVIDIA', 'AMD', 'Apple'] as const).map(b => (
                   <button
                     key={b}
                     onClick={() => {
@@ -362,6 +494,11 @@ export const PcDiagnosisView: React.FC = () => {
                 <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-300 font-bold border border-blue-500/20 text-[10px]">
                   {currentGpuMeta.shortLabel}
                 </span>
+                {(currentConfig.gpu.isLaptop || currentConfig.gpu.platform === 'laptop' || currentGpuMeta.isLaptop) && (
+                  <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 font-bold border border-purple-500/30 text-[10px] flex items-center gap-1">
+                    <Laptop className="w-2.5 h-2.5" /> Laptop TGP {currentConfig.gpu.tdp}W
+                  </span>
+                )}
                 <span className="text-slate-500">•</span>
                 <span className="font-mono text-slate-300">{currentConfig.gpu.vram}GB {currentConfig.gpu.vramType}</span>
                 <span className="text-slate-500">•</span>
@@ -445,17 +582,23 @@ export const PcDiagnosisView: React.FC = () => {
               </select>
             </div>
 
-            {/* Fuente de Poder (PSU) que tiene el usuario */}
+            {/* Fuente de Poder (PSU) o Cargador de Laptop */}
             <div className="pt-2 border-t border-slate-800/80">
               <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
                 <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-400" /> FUENTE DE PODER (PSU ACTUAL)
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  {isCurrentLaptop ? 'ALIMENTACIÓN / CARGADOR LAPTOP' : 'FUENTE DE PODER (PSU ACTUAL)'}
                 </label>
                 {currentConfig.psu && (
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {currentConfig.psu.brand === 'Corsair' && (
                       <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
                         CORSAIR
+                      </span>
+                    )}
+                    {currentConfig.psu.brand === 'Laptop Original' && (
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                        LAPTOP ADAPTER
                       </span>
                     )}
                     {currentConfig.psu.atx3 && (
@@ -486,6 +629,16 @@ export const PcDiagnosisView: React.FC = () => {
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
+                {/* Si es laptop, poner los cargadores de laptop arriba */}
+                {psus.some(p => p.brand === 'Laptop Original') && (
+                  <optgroup label="─── CARGADORES / ADAPTADORES DE NOTEBOOK ───">
+                    {psus.filter(p => p.brand === 'Laptop Original').map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
                 <optgroup label="─── FUENTES CORSAIR (SHIFT, HX PLATINUM, AX TITANIUM & RM) ───">
                   {psus.filter(p => p.brand === 'Corsair').map(p => (
                     <option key={p.id} value={p.id}>
@@ -494,7 +647,7 @@ export const PcDiagnosisView: React.FC = () => {
                   ))}
                 </optgroup>
                 <optgroup label="─── FUENTES PREMIUM (ASUS ROG, SEASONIC, BE QUIET!, MSI) ───">
-                  {psus.filter(p => p.brand && p.brand !== 'Corsair' && p.brand !== 'Genérica').map(p => (
+                  {psus.filter(p => p.brand && p.brand !== 'Corsair' && p.brand !== 'Genérica' && p.brand !== 'Laptop Original').map(p => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
@@ -612,6 +765,15 @@ export const PcDiagnosisView: React.FC = () => {
                       <div className="text-[10px] text-slate-400 font-normal mt-0.5">Juego unificado a lo ancho (Simuladores)</div>
                     </button>
                   </div>
+                </div>
+              )}
+
+              {isCurrentLaptop && (
+                <div className="mt-2.5 text-[11px] text-purple-300 bg-purple-950/40 p-2.5 rounded-xl border border-purple-800/40 flex items-center gap-2">
+                  <Laptop className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>
+                    <strong>Configuración Notebook:</strong> 1 pantalla interna integrada + {(currentConfig.monitorCount || 1) - 1 > 0 ? `${(currentConfig.monitorCount || 1) - 1} monitor(es) externo(s)` : 'monitores externos'} conectados por HDMI 2.1 o USB-C DisplayPort (hasta 8K a 60Hz).
+                  </span>
                 </div>
               )}
             </div>
@@ -1130,6 +1292,65 @@ export const PcDiagnosisView: React.FC = () => {
               })}
             </div>
           </div>
+
+          {/* Notebook / Laptop Hardware & Thermal Analysis Card */}
+          {isCurrentLaptop && (
+            <div className="bg-[#151921] border border-purple-500/30 rounded-2xl p-6 shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-purple-300 flex items-center gap-2">
+                  <Laptop className="w-4 h-4 text-purple-400" /> ANÁLISIS DE HARDWARE MÓVIL & TÉRMICA DE NOTEBOOK
+                </h4>
+                <span className="text-[10px] font-mono text-purple-300 bg-purple-950/80 px-2 py-0.5 rounded border border-purple-800/80 font-bold">
+                  Chasis Portátil Optimizado
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-[#1C222D] p-3.5 rounded-xl border border-slate-700/80">
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    <Zap className="w-3.5 h-3.5 text-amber-400" /> TGP / Balance Móvil
+                  </div>
+                  <div className="text-xs font-bold text-white mt-1">
+                    {currentConfig.gpu.tdp}W TGP Máximo
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">
+                    Dynamic Boost / SmartShift distribuye Watts dinámicamente entre CPU y GPU.
+                  </div>
+                </div>
+
+                <div className="bg-[#1C222D] p-3.5 rounded-xl border border-slate-700/80">
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    <Thermometer className="w-3.5 h-3.5 text-cyan-400" /> Gestión Térmica
+                  </div>
+                  <div className="text-xs font-bold text-cyan-300 mt-1">
+                    {currentConfig.cpu.tdp + currentConfig.gpu.tdp > 160 ? 'Perfil Turbo / Ventiladores Altos' : 'Térmica Silenciosa / Equilibrada'}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">
+                    Disipación dual con heatpipes y cámara de vapor diseñada para chasis compacto.
+                  </div>
+                </div>
+
+                <div className="bg-[#1C222D] p-3.5 rounded-xl border border-slate-700/80">
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    <BatteryCharging className="w-3.5 h-3.5 text-emerald-400" /> Switch MUX / Optimus
+                  </div>
+                  <div className="text-xs font-bold text-emerald-400 mt-1">
+                    Advanced Optimus Ready
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">
+                    Acceso directo de dGPU a pantalla y salida a múltiples monitores externos (hasta 8K).
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-xs text-purple-200 flex items-start gap-2">
+                <Info className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  <strong>Recomendación para Notebook:</strong> Las CPUs y GPUs móviles operan de forma segura hasta 95°C bajo carga extrema. Para jugar a altas tasas de cuadros por segundo o conectar 1 a 4 monitores externos (incluyendo resoluciones 4K u 8K), mantén siempre el cargador conectado a la red eléctrica para desbloquear el 100% de potencia gráfica.
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Drivers & OS Recommendations */}
           <div className="bg-[#151921] border border-slate-800 rounded-2xl p-6 shadow-lg">

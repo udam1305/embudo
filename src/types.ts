@@ -3,11 +3,14 @@ export type ResolutionType = '1080p' | '1440p' | 'ultrawide' | '4k' | '5k_ultraw
 export type GraphicPreset = 'low' | 'medium' | 'high' | 'ultra' | 'raytracing';
 export type UpscalingTechnology = 'none' | 'dlss' | 'fsr' | 'xess';
 export type UpscalingMode = 'native' | 'quality' | 'balanced' | 'performance' | 'ultra_performance';
+export type DeviceType = 'desktop' | 'laptop';
 
 export interface CPU {
   id: string;
   name: string;
   brand: 'AMD' | 'Intel' | 'Apple' | 'Other';
+  platform?: 'desktop' | 'laptop';
+  isLaptop?: boolean;
   socket: string;
   cores: number;
   threads: number;
@@ -27,10 +30,12 @@ export interface CPU {
 export interface GPU {
   id: string;
   name: string;
-  brand: 'NVIDIA' | 'AMD' | 'Intel';
+  brand: 'NVIDIA' | 'AMD' | 'Intel' | 'Apple';
+  platform?: 'desktop' | 'laptop';
+  isLaptop?: boolean;
   vram: number; // GB
-  vramType: string; // GDDR6, GDDR6X, GDDR7
-  tdp: number; // Watts
+  vramType: string; // GDDR6, GDDR6X, GDDR7, LPDDR5X, Unificada
+  tdp: number; // Watts (TGP in laptops)
   recommendedPsu: number; // Watts
   score1080p: number; // 0 - 100
   score1440p: number; // 0 - 100
@@ -62,9 +67,9 @@ export interface Storage {
 export interface PSU {
   id: string;
   name: string;
-  brand?: 'Corsair' | 'Seasonic' | 'ASUS ROG' | 'be quiet!' | 'MSI' | 'EVGA' | 'Genérica' | string;
+  brand?: 'Corsair' | 'Seasonic' | 'ASUS ROG' | 'be quiet!' | 'MSI' | 'EVGA' | 'Genérica' | 'Laptop Original' | string;
   wattage: number;
-  efficiency: '80 PLUS White' | '80 PLUS Bronze' | '80 PLUS Silver' | '80 PLUS Gold' | '80 PLUS Platinum' | '80 PLUS Titanium' | 'Genérica';
+  efficiency: '80 PLUS White' | '80 PLUS Bronze' | '80 PLUS Silver' | '80 PLUS Gold' | '80 PLUS Platinum' | '80 PLUS Titanium' | 'Genérica' | string;
   tier?: string;
   modular?: 'Totalmente Modular' | 'Semi-Modular' | 'No Modular';
   atx3?: boolean;
@@ -96,6 +101,8 @@ export interface DiagnosisConfig {
   workload: WorkloadType;
   workloads?: WorkloadType[];
   os: 'Windows 11' | 'Windows 10' | 'Linux' | 'macOS';
+  deviceType?: DeviceType; // 'desktop' | 'laptop'
+  laptopChargerWatts?: number; // e.g. 65, 100, 140, 180, 230, 280, 330
   // Multi-Monitor & Scaling Configuration
   monitorCount?: number; // 1, 2, 3, 4
   monitorMode?: 'gaming_primary' | 'surround_span'; // primary game vs spanned surround
@@ -116,6 +123,15 @@ export interface BottleneckResult {
     ramSpeedPenaltyPct: number;
     storagePenaltyPct: number;
     recommendedResolution: string;
+  };
+  laptopAnalysis?: {
+    isLaptop: boolean;
+    chassisType: 'Ultrabook / Liviana' | 'Gamer Equilibrada' | 'Gamer Alto Rendimiento' | 'Workstation Móvil';
+    combinedTdpWatts: number;
+    chargerCapacityWatts: number;
+    batteryDrainRisk: boolean;
+    thermalThrottleRisk: 'Bajo' | 'Moderado' | 'Alto' | 'Severo';
+    coolingGuidance: string;
   };
   displayAnalysis?: {
     totalMonitors: number;
@@ -188,7 +204,8 @@ export interface MobileDiagnosisResult {
 
 export interface PrebuiltPC {
   id: string;
-  tier: 'Entrada' | 'Media' | 'Alta' | 'Entusiasta';
+  tier: 'Entrada' | 'Media' | 'Alta' | 'Entusiasta' | 'Notebook Gaming' | 'Notebook Fino' | string;
+  formFactor?: 'desktop' | 'laptop';
   name: string;
   description: string;
   targetResolution: string;

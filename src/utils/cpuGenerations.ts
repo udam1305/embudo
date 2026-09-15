@@ -4,14 +4,47 @@ export interface CpuGenerationMeta {
   id: string;
   name: string;
   shortLabel: string;
-  brand: 'AMD' | 'Intel' | 'Other';
+  brand: 'AMD' | 'Intel' | 'Apple' | 'Other';
   order: number; // Higher number = newer generation
   socket: string;
   years: string;
+  isLaptop?: boolean;
 }
 
 export const KNOWN_CPU_GENERATIONS: CpuGenerationMeta[] = [
-  // --- AMD Generations (Newest to Oldest) ---
+  // --- AMD Laptop Generations ---
+  {
+    id: 'amd-zen5-mobile',
+    name: 'AMD Ryzen AI Serie 300 (Zen 5 Mobile • Strix Point)',
+    shortLabel: 'Ryzen AI 300 (Laptop)',
+    brand: 'AMD',
+    order: 204,
+    socket: 'FP8 (BGA)',
+    years: '2024 - 2025',
+    isLaptop: true
+  },
+  {
+    id: 'amd-zen4-mobile',
+    name: 'AMD Ryzen Serie 8000/7000 Mobile (Zen 4 • Hawk Point / Dragon Range)',
+    shortLabel: 'Ryzen 8000/7000 (Laptop)',
+    brand: 'AMD',
+    order: 184,
+    socket: 'FP7 / FP8 / FL1 (BGA)',
+    years: '2023 - 2024',
+    isLaptop: true
+  },
+  {
+    id: 'amd-zen3-mobile',
+    name: 'AMD Ryzen Serie 6000/5000 Mobile (Zen 3/3+ Laptop)',
+    shortLabel: 'Ryzen 6000/5000 (Laptop)',
+    brand: 'AMD',
+    order: 164,
+    socket: 'FP6 (BGA)',
+    years: '2021 - 2023',
+    isLaptop: true
+  },
+
+  // --- AMD Desktop Generations (Newest to Oldest) ---
   {
     id: 'amd-zen5',
     name: 'AMD Ryzen Serie 9000 (Zen 5 • AM5)',
@@ -85,7 +118,91 @@ export const KNOWN_CPU_GENERATIONS: CpuGenerationMeta[] = [
     years: '2012 - 2015'
   },
 
-  // --- Intel Generations (Newest to Oldest) ---
+  // --- Intel Laptop Generations ---
+  {
+    id: 'intel-ultra2-mobile',
+    name: 'Intel Core Ultra Serie 2 (Lunar Lake • BGA2833 Laptop)',
+    shortLabel: 'Core Ultra 200V (Laptop)',
+    brand: 'Intel',
+    order: 207,
+    socket: 'BGA2833',
+    years: '2024 - 2025',
+    isLaptop: true
+  },
+  {
+    id: 'intel-ultra1-mobile',
+    name: 'Intel Core Ultra Serie 1 (Meteor Lake • BGA2049 Laptop)',
+    shortLabel: 'Core Ultra 100H (Laptop)',
+    brand: 'Intel',
+    order: 197,
+    socket: 'BGA2049',
+    years: '2023 - 2024',
+    isLaptop: true
+  },
+  {
+    id: 'intel-14th-mobile',
+    name: 'Intel Core 14.ª Gen Mobile (Raptor Lake-HX Laptop)',
+    shortLabel: 'Core 14.ª Gen (Laptop HX)',
+    brand: 'Intel',
+    order: 194,
+    socket: 'BGA1964',
+    years: '2024',
+    isLaptop: true
+  },
+  {
+    id: 'intel-13th-mobile',
+    name: 'Intel Core 13.ª Gen Mobile (Raptor Lake-H / HX Laptop)',
+    shortLabel: 'Core 13.ª Gen (Laptop H/HX)',
+    brand: 'Intel',
+    order: 184,
+    socket: 'BGA1744 / BGA1964',
+    years: '2023',
+    isLaptop: true
+  },
+  {
+    id: 'intel-12th-mobile',
+    name: 'Intel Core 12.ª Gen Mobile (Alder Lake-H / U Laptop)',
+    shortLabel: 'Core 12.ª Gen (Laptop H/U)',
+    brand: 'Intel',
+    order: 174,
+    socket: 'BGA1744',
+    years: '2022',
+    isLaptop: true
+  },
+  {
+    id: 'intel-11th-mobile',
+    name: 'Intel Core 11.ª Gen Mobile (Tiger Lake-H Laptop)',
+    shortLabel: 'Core 11.ª Gen (Laptop)',
+    brand: 'Intel',
+    order: 154,
+    socket: 'BGA1787',
+    years: '2021',
+    isLaptop: true
+  },
+  {
+    id: 'intel-10th-mobile',
+    name: 'Intel Core 10.ª Gen Mobile (Comet Lake-H Laptop)',
+    shortLabel: 'Core 10.ª Gen (Laptop)',
+    brand: 'Intel',
+    order: 144,
+    socket: 'BGA1440',
+    years: '2020',
+    isLaptop: true
+  },
+
+  // --- Apple Silicon (Laptop / MacBook) ---
+  {
+    id: 'apple-m-series',
+    name: 'Apple Silicon Serie M (MacBook Pro / Air)',
+    shortLabel: 'Apple Silicon (MacBook)',
+    brand: 'Apple',
+    order: 191,
+    socket: 'Apple SoC',
+    years: '2020 - 2024',
+    isLaptop: true
+  },
+
+  // --- Intel Desktop Generations (Newest to Oldest) ---
   {
     id: 'intel-ultra2',
     name: 'Intel Core Ultra Serie 2 (Arrow Lake • LGA1851)',
@@ -189,8 +306,52 @@ export function getCpuGenerationMeta(cpu: CPU): CpuGenerationMeta {
 
   const name = cpu.name.toLowerCase();
   const socket = cpu.socket.toUpperCase();
+  const isLap = cpu.platform === 'laptop' || cpu.isLaptop || socket.includes('BGA') || socket.includes('FP') || socket.includes('FL1') || socket.includes('SOC');
 
-  // AMD
+  // Apple Silicon
+  if (cpu.brand === 'Apple' || name.includes('apple') || name.includes('m1') || name.includes('m2') || name.includes('m3') || name.includes('m4')) {
+    return KNOWN_CPU_GENERATIONS.find(g => g.id === 'apple-m-series')!;
+  }
+
+  // AMD Mobile
+  if (isLap || name.includes('hx 370') || name.includes('ryzen ai') || name.includes('7945hx') || name.includes('8845hs') || name.includes('7840hs') || name.includes('8945hs') || name.includes('8645hs') || name.includes('7640hs') || name.includes('7735hs') || name.includes('6800h') || name.includes('5800h') || name.includes('5600h') || name.includes('5700u') || name.includes('5500u')) {
+    if (name.includes('ai 9') || name.includes('hx 370') || name.includes('ai 300') || name.includes('strix')) {
+      return KNOWN_CPU_GENERATIONS.find(g => g.id === 'amd-zen5-mobile')!;
+    }
+    if (name.includes('7945hx') || name.includes('8945hs') || name.includes('8845hs') || name.includes('7840hs') || name.includes('8645hs') || name.includes('7640hs') || name.includes('8840u') || name.includes('7735hs')) {
+      return KNOWN_CPU_GENERATIONS.find(g => g.id === 'amd-zen4-mobile')!;
+    }
+    if (name.includes('6900hx') || name.includes('6800h') || name.includes('5800h') || name.includes('5600h') || name.includes('5700u') || name.includes('5500u')) {
+      return KNOWN_CPU_GENERATIONS.find(g => g.id === 'amd-zen3-mobile')!;
+    }
+  }
+
+  // Intel Mobile
+  if (isLap || name.includes('288v') || name.includes('258v') || name.includes('226v') || name.includes('185h') || name.includes('155h') || name.includes('125h') || name.includes('14900hx') || name.includes('14700hx') || name.includes('14650hx') || name.includes('14500hx') || name.includes('13980hx') || name.includes('13900h') || name.includes('13700h') || name.includes('13620h') || name.includes('13500h') || name.includes('13420h') || name.includes('12900h') || name.includes('12700h') || name.includes('12500h') || name.includes('1255u') || name.includes('1235u') || name.includes('11800h') || name.includes('11400h') || name.includes('10750h') || name.includes('10300h')) {
+    if (name.includes('288v') || name.includes('258v') || name.includes('226v') || (name.includes('ultra') && name.includes('v'))) {
+      return KNOWN_CPU_GENERATIONS.find(g => g.id === 'intel-ultra2-mobile')!;
+    }
+    if (name.includes('185h') || name.includes('165h') || name.includes('155h') || name.includes('135h') || name.includes('125h') || (name.includes('ultra') && name.includes('h'))) {
+      return KNOWN_CPU_GENERATIONS.find(g => g.id === 'intel-ultra1-mobile')!;
+    }
+    if (name.includes('14900hx') || name.includes('14700hx') || name.includes('14650hx') || name.includes('14500hx')) {
+      return KNOWN_CPU_GENERATIONS.find(g => g.id === 'intel-14th-mobile')!;
+    }
+    if (name.includes('13980hx') || name.includes('13900h') || name.includes('13700h') || name.includes('13620h') || name.includes('13500h') || name.includes('13420h')) {
+      return KNOWN_CPU_GENERATIONS.find(g => g.id === 'intel-13th-mobile')!;
+    }
+    if (name.includes('12900h') || name.includes('12700h') || name.includes('12500h') || name.includes('1255u') || name.includes('1235u')) {
+      return KNOWN_CPU_GENERATIONS.find(g => g.id === 'intel-12th-mobile')!;
+    }
+    if (name.includes('11800h') || name.includes('11400h')) {
+      return KNOWN_CPU_GENERATIONS.find(g => g.id === 'intel-11th-mobile')!;
+    }
+    if (name.includes('10750h') || name.includes('10300h')) {
+      return KNOWN_CPU_GENERATIONS.find(g => g.id === 'intel-10th-mobile')!;
+    }
+  }
+
+  // AMD Desktop
   if (cpu.brand === 'AMD' || name.includes('ryzen') || name.includes('fx-')) {
     if (name.includes('9950') || name.includes('9900') || name.includes('9800') || name.includes('9700') || name.includes('9600')) {
       return KNOWN_CPU_GENERATIONS.find(g => g.id === 'amd-zen5')!;
@@ -285,7 +446,7 @@ export interface CpuGroup {
   id: string;
   label: string;
   shortLabel: string;
-  brand: 'AMD' | 'Intel' | 'Other';
+  brand: 'AMD' | 'Intel' | 'Apple' | 'Other';
   order: number;
   cpus: CPU[];
 }

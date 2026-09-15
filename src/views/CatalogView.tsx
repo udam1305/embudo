@@ -15,30 +15,32 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ setActiveTab }) => {
   const filtered = prebuilts.filter(p => selectedTier === 'All' || p.tier === selectedTier);
 
   const handleLoadPrebuilt = (pc: PrebuiltPC) => {
+    const isLap = pc.tier.includes('Notebook') || pc.cpu.platform === 'laptop' || pc.cpu.isLaptop;
     updateConfig({
+      platform: isLap ? 'laptop' : 'desktop',
       cpu: pc.cpu,
       gpu: pc.gpu,
       ram: pc.ram,
       storage: pc.storage,
-      resolution: pc.tier === 'Entusiasta' ? '4k' : pc.tier === 'Alta' ? '1440p' : pc.tier === 'Media' ? '1440p' : '1080p'
+      resolution: pc.tier === 'Entusiasta' ? '4k' : isLap ? '1440p' : pc.tier === 'Alta' ? '1440p' : pc.tier === 'Media' ? '1440p' : '1080p'
     });
     setActiveTab('pc-diag');
   };
 
-  const tiers = ['All', 'Entrada', 'Media', 'Alta', 'Entusiasta'];
+  const tiers = ['All', 'Entrada', 'Media', 'Alta', 'Entusiasta', 'Notebook Gaming', 'Notebook Fino'];
 
   return (
     <div className="space-y-8 pb-16 max-w-7xl mx-auto px-4 sm:px-6">
       {/* Header */}
       <div className="border-b border-slate-800 pb-6 pt-2">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">
-          <Layers className="w-4 h-4 text-cyan-400" /> CATÁLOGO DE ENSAMBLES BALANCEADOS
+          <Layers className="w-4 h-4 text-cyan-400" /> CATÁLOGO DE ENSAMBLES BALANCEADOS & NOTEBOOKS
         </div>
         <h1 className="text-2xl sm:text-3xl font-black text-white">
-          Configuraciones Prearmadas (Gama Entrada a Entusiasta)
+          Configuraciones Prearmadas (PC de Escritorio & Notebooks)
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          PCs diseñadas para eliminar cuellos de botella por hardware, con relaciones perfectas de consumo y rendimiento.
+          Equipos optimizados para eliminar cuellos de botella por hardware, con relaciones perfectas de consumo y rendimiento térmico.
         </p>
 
         {/* Tier filter buttons */}
@@ -53,7 +55,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ setActiveTab }) => {
                   : 'bg-[#151921] text-slate-400 hover:text-slate-200 border border-slate-800'
               }`}
             >
-              {t === 'All' ? 'Todos los Ensambles' : `Gama ${t}`}
+              {t === 'All' ? 'Todos los Equipos' : t.startsWith('Notebook') ? `💻 ${t}` : `Gama ${t}`}
             </button>
           ))}
         </div>
