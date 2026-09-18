@@ -25,8 +25,12 @@ import { INITIAL_ADMIN_STATS } from '../data/initialData';
 import { groupCpusByGeneration, getCpuGenerationMeta, KNOWN_CPU_GENERATIONS } from '../utils/cpuGenerations';
 import { groupGpusByGeneration, getGpuGenerationMeta, KNOWN_GPU_GENERATIONS } from '../utils/gpuGenerations';
 
-export const AdminView: React.FC = () => {
-  const { isAdmin, loginAsAdmin, logoutAdmin } = useAuth();
+interface AdminViewProps {
+  embedded?: boolean;
+}
+
+export const AdminView: React.FC<AdminViewProps> = ({ embedded = false }) => {
+  const { user, isAdmin, loginAsAdmin, logoutAdmin } = useAuth();
   const {
     cpus,
     gpus,
@@ -294,18 +298,43 @@ export const AdminView: React.FC = () => {
   // If not logged in as Admin, show high-security Login screen
   if (!isAdmin) {
     return (
-      <div className="max-w-md mx-auto py-16 px-4">
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-6">
+      <div className={`mx-auto ${embedded ? 'max-w-xl py-4' : 'max-w-md py-16 px-4'}`}>
+        <div className="bg-[#151921] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-6">
           <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mx-auto">
             <Shield className="w-7 h-7" />
           </div>
 
           <div>
-            <h2 className="text-2xl font-black text-white">Panel de Administración</h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Acceso restringido para la actualización en caliente de componentes y telemetría oficial.
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 text-[11px] font-bold uppercase tracking-wider mb-2">
+              Apartado de Administración
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white">Acceso Restringido</h2>
+            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto leading-relaxed">
+              Este apartado está reservado para la gestión de la base de datos de hardware en caliente, altas y bajas de componentes y monitoreo de telemetría.
             </p>
           </div>
+
+          {user?.email?.toLowerCase() === 'adamarmoza@gmail.com' && (
+            <div className="p-3 bg-cyan-950/40 border border-cyan-500/40 rounded-xl text-xs text-cyan-300 text-left space-y-2">
+              <div className="flex items-center gap-2 font-bold text-cyan-200">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span>Sesión detectada como Administrador Principal:</span>
+              </div>
+              <p className="text-[11px] text-cyan-300/80">
+                Tu cuenta ({user.email}) tiene permisos asignados. Puedes activar las herramientas de administración directamente:
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  await loginAsAdmin('embudo-admin-2026');
+                }}
+                className="w-full py-2 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-md shadow-cyan-600/30"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Activar Funciones de Administrador</span>
+              </button>
+            </div>
+          )}
 
           {loginError && (
             <div className="p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/60 text-xs text-rose-300">
@@ -313,24 +342,29 @@ export const AdminView: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleAdminLogin} className="space-y-4">
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
-              <input
-                type="password"
-                required
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="Ingresa clave de administrador (ej: admin123)"
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-              />
+          <form onSubmit={handleAdminLogin} className="space-y-4 text-left">
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Clave Maestra de Administrador
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                <input
+                  type="password"
+                  required
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Ingresa clave de administrador..."
+                  className="w-full pl-9 pr-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-lg shadow-cyan-600/20"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-cyan-600/20"
             >
-              Autenticar Administrador
+              Desbloquear Panel Admin
             </button>
           </form>
         </div>
@@ -339,37 +373,57 @@ export const AdminView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 pb-16 max-w-7xl mx-auto px-4 sm:px-6">
+    <div className={`space-y-8 ${embedded ? 'w-full' : 'pb-16 max-w-7xl mx-auto px-4 sm:px-6'}`}>
       {/* Header */}
-      <div className="border-b border-slate-800 pb-6 pt-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400 mb-1">
-            <Shield className="w-4 h-4" /> Gestión Administrativa en Caliente
+      {!embedded ? (
+        <div className="border-b border-slate-800 pb-6 pt-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400 mb-1">
+              <Shield className="w-4 h-4" /> Gestión Administrativa en Caliente
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+              Panel de Control & Base de Datos
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">
+              Disponibilidad 99.9% activa. Actualizaciones en memoria y backend sin reiniciar el servicio.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-            Panel de Control & Base de Datos
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Disponibilidad 99.9% activa. Actualizaciones en memoria y backend sin reiniciar el servicio.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchStats}
+              className="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white cursor-pointer"
+              title="Refrescar métricas"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={logoutAdmin}
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-rose-950/40 border border-slate-700 text-slate-300 hover:text-rose-300 text-xs font-bold cursor-pointer"
+            >
+              Cerrar Sesión Admin
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#151921] border border-slate-800 rounded-2xl">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400">
+              <Shield className="w-4 h-4" /> Panel de Control & Base de Datos
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Gestión de base de datos en caliente, métricas de telemetría y altas/bajas de hardware.
+            </p>
+          </div>
           <button
             onClick={fetchStats}
-            className="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white cursor-pointer"
-            title="Refrescar métricas"
+            className="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-[#1C222D] hover:bg-slate-700/60 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
           >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={logoutAdmin}
-            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-rose-950/40 border border-slate-700 text-slate-300 hover:text-rose-300 text-xs font-bold cursor-pointer"
-          >
-            Cerrar Sesión Admin
+            <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Refrescar Estadísticas</span>
           </button>
         </div>
-      </div>
+      )}
 
       {actionSuccess && (
         <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 rounded-xl text-xs text-emerald-300 flex items-center gap-2">

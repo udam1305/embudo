@@ -38,8 +38,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
     { id: 'comparator', label: 'Comparador PC', icon: Scale },
     { id: 'smartphones', label: 'Smartphones', icon: Smartphone },
     { id: 'catalog', label: 'Catálogo', icon: Layers },
-    { id: 'account', label: 'Cuenta', icon: User },
-    { id: 'admin', label: 'Admin', icon: Shield }
+    { id: 'account', label: user ? 'Mi Perfil' : 'Cuenta', icon: User },
+    ...(user && isAdmin ? [{ id: 'admin' as ActiveTab, label: 'Admin', icon: Shield }] : [])
   ];
 
   const handleNavClick = (id: ActiveTab) => {

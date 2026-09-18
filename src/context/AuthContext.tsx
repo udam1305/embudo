@@ -97,6 +97,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (currentUser) {
           setIsCloudSynced(true);
+
+          // Check for primary admin email or previously verified admin token
+          const isPrimaryAdmin = currentUser.email?.toLowerCase() === 'adamarmoza@gmail.com';
+          const savedAdminToken = localStorage.getItem('embudo_admin_token');
+
+          if (isPrimaryAdmin || savedAdminToken === 'embudo-admin-2026') {
+            setIsAdmin(true);
+            setAdminToken('embudo-admin-2026');
+            localStorage.setItem('embudo_admin_token', 'embudo-admin-2026');
+          } else {
+            setIsAdmin(false);
+            setAdminToken(null);
+            localStorage.removeItem('embudo_admin_token');
+          }
+
           const userRef = doc(db, 'users', currentUser.uid);
 
           // 1. Sync User Profile in Firestore
@@ -108,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 email: currentUser.email || '',
                 displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Usuario',
                 photoURL: currentUser.photoURL || '',
+                role: isPrimaryAdmin ? 'admin' : 'user',
                 createdAt: new Date().toISOString(),
                 lastLoginAt: new Date().toISOString(),
                 preferences: {
@@ -117,6 +133,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               });
             } else {
               const data = userSnap.data();
+              if (data?.role === 'admin' || isPrimaryAdmin) {
+                setIsAdmin(true);
+                setAdminToken('embudo-admin-2026');
+                localStorage.setItem('embudo_admin_token', 'embudo-admin-2026');
+              }
               if (data?.preferences?.theme) {
                 setIsDarkMode(data.preferences.theme === 'dark');
               }
@@ -128,7 +149,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 {
                   lastLoginAt: new Date().toISOString(),
                   email: currentUser.email || '',
-                  displayName: currentUser.displayName || data.displayName || currentUser.email?.split('@')[0] || 'Usuario'
+                  displayName: currentUser.displayName || data.displayName || currentUser.email?.split('@')[0] || 'Usuario',
+                  ...(isPrimaryAdmin ? { role: 'admin' } : {})
                 },
                 { merge: true }
               );
@@ -201,6 +223,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else {
           setIsCloudSynced(false);
+          setIsAdmin(false);
+          setAdminToken(null);
+          localStorage.removeItem('embudo_admin_token');
           // Restore from local storage for guest
           try {
             const local = localStorage.getItem('embudo_history');
@@ -352,9 +377,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unsubscribeDiagnosesRef.current();
       unsubscribeDiagnosesRef.current = null;
     }
-    await fbSignOut(auth);
+    try {
+      await fbSignOut(auth);
+    } catch (e) {
+      console.warn('Signout note:', e);
+    }
     setUser(null);
     setIsCloudSynced(false);
+    setIsAdmin(false);
+    setAdminToken(null);
+    localStorage.removeItem('embudo_admin_token');
   };
 
   const loginAsAdmin = async (password: string): Promise<boolean> => {
