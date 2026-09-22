@@ -13,6 +13,21 @@ import {
 } from './src/data/initialData';
 import { calculateBottleneck, calculateMobileDiagnostic } from './src/lib/calculatorEngine';
 import { CPU, GPU, MobileSoC } from './src/types';
+import {
+  getAllComponents,
+  getBuildCoresStatus,
+  searchComponents,
+  triggerBuildCoresSync
+} from './server/buildcoresLoader';
+import {
+  getBrands,
+  getPhonesByBrand,
+  getLatestPhones,
+  getTopByInterest,
+  getTopByFans,
+  searchPhones,
+  getPhoneDetails
+} from './server/mobileSpecsService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,16 +73,46 @@ async function startServer() {
     });
   });
 
-  // 1. Get all hardware components
+  // 1. Get all hardware components (Integrated with BuildCores Open DB)
   app.get('/api/components/all', (req: Request, res: Response) => {
+    const all = getAllComponents();
     res.json({
-      cpus,
-      gpus,
-      rams,
-      storages,
-      socs,
+      cpus: all.cpus,
+      gpus: all.gpus,
+      motherboards: all.motherboards,
+      psus: all.psus,
+      rams: all.rams,
+      storages: all.storages,
+      socs: all.socs,
+      metadata: all.metadata,
       timestamp: Date.now()
     });
+  });
+
+  // BuildCores sync status & metadata
+  app.get('/api/buildcores/status', (req: Request, res: Response) => {
+    res.json(getBuildCoresStatus());
+  });
+
+  // Trigger automatic/manual sync from GitHub repository
+  app.post('/api/buildcores/sync', async (req: Request, res: Response) => {
+    try {
+      const result = await triggerBuildCoresSync();
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || 'Error en sincronización' });
+    }
+  });
+
+  // Search through 20,000+ components on demand
+  app.get('/api/components/search', (req: Request, res: Response) => {
+    const { category, q, limit } = req.query;
+    const results = searchComponents(
+      String(category || 'cpus'),
+      String(q || ''),
+      limit ? parseInt(String(limit)) : 50
+    );
+    res.json({ success: true, count: results.length, results });
   });
 
   // 2. Bottleneck calculation endpoint
@@ -116,6 +161,101 @@ async function startServer() {
     }
   });
 
+  // --- MOBILE SPECS API (RevengerNick/mobile-specs-api integration) ---
+  // API Info & Endpoints documentation
+  app.get('/api/phones/info', (req: Request, res: Response) => {
+    res.json({
+      status: true,
+      service: 'Mobile Specs API (GSMArena Scraper Engine)',
+      repository: 'https://github.com/RevengerNick/mobile-specs-api',
+      endpoints: [
+        { method: 'GET', path: '/api/phones/brands', description: 'List of all phone brands' },
+        { method: 'GET', path: '/api/phones/brands/:brandSlug', description: 'List of phones for brand slug' },
+        { method: 'GET', path: '/api/phones/latest', description: 'Latest released smartphones' },
+        { method: 'GET', path: '/api/phones/top-by-interest', description: 'Top 10 smartphones by daily interest' },
+        { method: 'GET', path: '/api/phones/top-by-fans', description: 'Top 10 smartphones by total fans' },
+        { method: 'GET', path: '/api/phones/search?query=:q', description: 'Search smartphones across 6,000+ devices' },
+        { method: 'GET', path: '/api/phones/details/:slug', description: 'Complete technical specifications of a phone' }
+      ]
+    });
+  });
+
+  // 1. All brands
+  app.get('/api/phones/brands', async (req: Request, res: Response) => {
+    try {
+      const data = await getBrands();
+      res.json({ status: true, data });
+    } catch (err: any) {
+      res.status(500).json({ status: false, error: err?.message || 'Error al obtener marcas' });
+    }
+  });
+
+  // 2. Phones by brand
+  app.get('/api/phones/brands/:brandSlug', async (req: Request, res: Response) => {
+    try {
+      const { brandSlug } = req.params;
+      const data = await getPhonesByBrand(brandSlug);
+      res.json({ status: true, data });
+    } catch (err: any) {
+      res.status(500).json({ status: false, error: err?.message || 'Error al obtener teléfonos por marca' });
+    }
+  });
+
+  // 3. Latest devices
+  app.get('/api/phones/latest', async (req: Request, res: Response) => {
+    try {
+      const data = await getLatestPhones();
+      res.json({ status: true, data });
+    } catch (err: any) {
+      res.status(500).json({ status: false, error: err?.message || 'Error al obtener últimos dispositivos' });
+    }
+  });
+
+  // 4. Top 10 by daily interest
+  app.get('/api/phones/top-by-interest', async (req: Request, res: Response) => {
+    try {
+      const data = await getTopByInterest();
+      res.json({ status: true, data });
+    } catch (err: any) {
+      res.status(500).json({ status: false, error: err?.message || 'Error al obtener top por interés' });
+    }
+  });
+
+  // 5. Top 10 by fans
+  app.get('/api/phones/top-by-fans', async (req: Request, res: Response) => {
+    try {
+      const data = await getTopByFans();
+      res.json({ status: true, data });
+    } catch (err: any) {
+      res.status(500).json({ status: false, error: err?.message || 'Error al obtener top por fans' });
+    }
+  });
+
+  // 6. Search phones
+  app.get('/api/phones/search', async (req: Request, res: Response) => {
+    try {
+      const query = (req.query.query || req.query.q || '') as string;
+      if (!query || !query.trim()) {
+        return res.status(400).json({ status: false, error: 'Query parameter is required' });
+      }
+      const data = await searchPhones(query);
+      res.json({ status: true, data });
+    } catch (err: any) {
+      res.status(500).json({ status: false, error: err?.message || 'Error en búsqueda de teléfonos' });
+    }
+  });
+
+  // 7. Phone details
+  app.get(['/api/phones/details/:slug', '/api/phones/:slug'], async (req: Request, res: Response) => {
+    try {
+      const { slug } = req.params;
+      const data = await getPhoneDetails(slug);
+      res.json({ status: true, data });
+    } catch (err: any) {
+      res.status(500).json({ status: false, error: err?.message || 'Error al obtener especificaciones del teléfono' });
+    }
+  });
+
   // 4. Prebuilt Catalogs
   app.get('/api/catalog', (req: Request, res: Response) => {
     res.json({ prebuilts });
@@ -123,12 +263,18 @@ async function startServer() {
 
   // 5. Admin Stats
   app.get('/api/stats', (req: Request, res: Response) => {
+    const all = getAllComponents();
     res.json({
       stats: {
         ...stats,
-        totalCpus: cpus.length,
-        totalGpus: gpus.length,
-        totalSocs: socs.length
+        totalCpus: all.cpus.length,
+        totalGpus: all.gpus.length,
+        totalMotherboards: all.motherboards.length,
+        totalPsus: all.psus.length,
+        totalRams: all.rams.length,
+        totalStorages: all.storages.length,
+        totalSocs: all.socs.length,
+        buildCores: all.metadata
       }
     });
   });

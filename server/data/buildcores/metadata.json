@@ -1,0 +1,14 @@
+{
+  "sourceRepo": "https://github.com/buildcores/buildcores-open-db",
+  "license": "Open Data Commons Attribution License (ODC-By) v1.0",
+  "synchronizedAt": "2026-09-22T14:59:39.408Z",
+  "counts": {
+    "cpus": 789,
+    "gpus": 3862,
+    "motherboards": 3701,
+    "psus": 3297,
+    "rams": 4876,
+    "storages": 3495,
+    "total": 20020
+  }
+}

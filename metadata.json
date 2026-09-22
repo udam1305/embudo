@@ -1,6 +1,6 @@
 {
   "name": "Embudo - Diagnóstico de Cuello de Botella PC, Notebook & Móvil",
-  "description": "Calculadora y diagnóstico de cuello de botella para PC de escritorio, Notebooks y Smartphones. Soporte multi-monitor hasta 8K, TGP móvil, análisis de FPS y Watts recomendados.",
+  "description": "Calculadora y diagnóstico de cuello de botella para PC, Notebooks y Smartphones con sincronización de más de 20,000 componentes de PC y catálogo de más de 6,000 teléfonos con Mobile Specs API (GSMArena).",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

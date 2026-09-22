@@ -15,6 +15,7 @@ import {
   Flame,
   Gamepad2,
   Search,
+  X,
   Check,
   TrendingUp,
   Info,
@@ -29,14 +30,14 @@ import {
 } from 'lucide-react';
 import { useHardware } from '../context/HardwareContext';
 import { useAuth } from '../context/AuthContext';
-import { CPU, GPU, RAM, Storage, ResolutionType, WorkloadType, UpscalingTechnology, UpscalingMode } from '../types';
+import { CPU, GPU, RAM, Storage, Motherboard, ResolutionType, WorkloadType, UpscalingTechnology, UpscalingMode } from '../types';
 import { ExportCardModal } from '../components/ExportCardModal';
 import { groupCpusByGeneration, getCpuGenerationMeta, KNOWN_CPU_GENERATIONS } from '../utils/cpuGenerations';
 import { groupGpusByGeneration, getGpuGenerationMeta, KNOWN_GPU_GENERATIONS } from '../utils/gpuGenerations';
 import confetti from 'canvas-confetti';
 
 export const PcDiagnosisView: React.FC = () => {
-  const { cpus, gpus, rams, storages, psus, currentConfig, currentResult, updateConfig } = useHardware();
+  const { cpus, gpus, rams, storages, psus, motherboards, currentConfig, currentResult, updateConfig } = useHardware();
   const { saveDiagnosis, user } = useAuth();
 
   const [showExportModal, setShowExportModal] = useState(false);
@@ -82,8 +83,102 @@ export const PcDiagnosisView: React.FC = () => {
   const [gpuSearch, setGpuSearch] = useState('');
   const [cpuFilterBrand, setCpuFilterBrand] = useState<'All' | 'AMD' | 'Intel' | 'Apple'>('All');
   const [cpuFilterGen, setCpuFilterGen] = useState<string>('All');
-  const [gpuFilterBrand, setGpuFilterBrand] = useState<'All' | 'NVIDIA' | 'AMD' | 'Apple'>('All');
+  const [gpuFilterBrand, setGpuFilterBrand] = useState<'All' | 'NVIDIA' | 'AMD' | 'Intel' | 'Apple'>('All');
   const [gpuFilterGen, setGpuFilterGen] = useState<string>('All');
+
+  // Brand and Search filters for Motherboard, RAM, Storage, and PSU
+  const [mbFilterBrand, setMbFilterBrand] = useState<string>('All');
+  const [mbSearch, setMbSearch] = useState<string>('');
+  const [ramFilterBrand, setRamFilterBrand] = useState<string>('All');
+  const [ramSearch, setRamSearch] = useState<string>('');
+  const [storageFilterBrand, setStorageFilterBrand] = useState<string>('All');
+  const [storageSearch, setStorageSearch] = useState<string>('');
+  const [psuFilterBrand, setPsuFilterBrand] = useState<string>('All');
+  const [psuSearch, setPsuSearch] = useState<string>('');
+
+  // Available brands derived from data
+  const availableMbBrands = useMemo(() => {
+    const brands = new Set<string>();
+    motherboards.forEach(m => { if (m.brand) brands.add(m.brand); });
+    return ['All', ...Array.from(brands).sort()];
+  }, [motherboards]);
+
+  const filteredMotherboards = useMemo(() => {
+    return motherboards.filter(m => {
+      const matchBrand = mbFilterBrand === 'All' || m.brand?.toLowerCase() === mbFilterBrand.toLowerCase();
+      const q = mbSearch.trim().toLowerCase();
+      const matchSearch = !q ||
+        m.name.toLowerCase().includes(q) ||
+        (m.brand && m.brand.toLowerCase().includes(q)) ||
+        (m.socket && m.socket.toLowerCase().includes(q)) ||
+        (m.chipset && m.chipset.toLowerCase().includes(q)) ||
+        (m.formFactor && m.formFactor.toLowerCase().includes(q));
+      return matchBrand && matchSearch;
+    });
+  }, [motherboards, mbFilterBrand, mbSearch]);
+
+  const availableRamBrands = useMemo(() => {
+    const brands = new Set<string>();
+    rams.forEach(r => { if (r.brand) brands.add(r.brand); });
+    return ['All', ...Array.from(brands).sort()];
+  }, [rams]);
+
+  const filteredRams = useMemo(() => {
+    return rams.filter(r => {
+      const matchBrand = ramFilterBrand === 'All' || r.brand?.toLowerCase() === ramFilterBrand.toLowerCase();
+      const q = ramSearch.trim().toLowerCase();
+      const matchSearch = !q ||
+        (r.name && r.name.toLowerCase().includes(q)) ||
+        (r.brand && r.brand.toLowerCase().includes(q)) ||
+        (r.type && r.type.toLowerCase().includes(q)) ||
+        `${r.capacityGb}`.includes(q) ||
+        `${r.capacityGb}gb`.includes(q) ||
+        `${r.speedMhz}`.includes(q) ||
+        `cl${r.casLatency}`.toLowerCase().includes(q);
+      return matchBrand && matchSearch;
+    });
+  }, [rams, ramFilterBrand, ramSearch]);
+
+  const availableStorageBrands = useMemo(() => {
+    const brands = new Set<string>();
+    storages.forEach(s => { if (s.brand) brands.add(s.brand); });
+    return ['All', ...Array.from(brands).sort()];
+  }, [storages]);
+
+  const filteredStorages = useMemo(() => {
+    return storages.filter(s => {
+      const matchBrand = storageFilterBrand === 'All' || s.brand?.toLowerCase() === storageFilterBrand.toLowerCase();
+      const q = storageSearch.trim().toLowerCase();
+      const matchSearch = !q ||
+        (s.name && s.name.toLowerCase().includes(q)) ||
+        (s.brand && s.brand.toLowerCase().includes(q)) ||
+        (s.type && s.type.toLowerCase().includes(q)) ||
+        `${s.capacityGb}`.includes(q) ||
+        `${s.capacityGb}gb`.includes(q) ||
+        (s.capacityGb >= 1000 && `${s.capacityGb / 1000}tb`.includes(q));
+      return matchBrand && matchSearch;
+    });
+  }, [storages, storageFilterBrand, storageSearch]);
+
+  const availablePsuBrands = useMemo(() => {
+    const brands = new Set<string>();
+    psus.forEach(p => { if (p.brand) brands.add(p.brand); });
+    return ['All', ...Array.from(brands).sort()];
+  }, [psus]);
+
+  const filteredPsus = useMemo(() => {
+    return psus.filter(p => {
+      const matchBrand = psuFilterBrand === 'All' || p.brand?.toLowerCase() === psuFilterBrand.toLowerCase();
+      const q = psuSearch.trim().toLowerCase();
+      const matchSearch = !q ||
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.brand && p.brand.toLowerCase().includes(q)) ||
+        `${p.wattage}`.includes(q) ||
+        `${p.wattage}w`.includes(q) ||
+        (p.efficiency && p.efficiency.toLowerCase().includes(q));
+      return matchBrand && matchSearch;
+    });
+  }, [psus, psuFilterBrand, psuSearch]);
 
   // Available CPU generations based on brand filter
   const availableGenerations = useMemo(() => {
@@ -421,12 +516,12 @@ export const PcDiagnosisView: React.FC = () => {
 
           {/* GPU Selection Card */}
           <div className="bg-[#151921] border border-slate-800 rounded-2xl p-5 shadow-lg">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
                 <Monitor className="w-4 h-4 text-blue-400" /> TARJETA GRÁFICA (GPU)
               </label>
-              <div className="flex items-center gap-1 text-[11px]">
-                {(['All', 'NVIDIA', 'AMD', 'Apple'] as const).map(b => (
+              <div className="flex items-center gap-1 text-[11px] flex-wrap">
+                {(['All', 'NVIDIA', 'AMD', 'Intel', 'Apple'] as const).map(b => (
                   <button
                     key={b}
                     onClick={() => {
@@ -515,19 +610,179 @@ export const PcDiagnosisView: React.FC = () => {
             </div>
           </div>
 
-          {/* RAM & Storage Selection */}
+          {/* Motherboard, RAM & Storage Selection */}
           <div className="bg-[#151921] border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+            {/* Motherboard Selector */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-emerald-400" /> PLACA BASE / MOTHERBOARD
+                </label>
+                {/* Brand Filter Pills for Motherboard */}
+                <div className="flex items-center gap-1 text-[11px] flex-wrap">
+                  {['All', 'ASUS', 'MSI', 'Gigabyte', 'ASRock'].map(b => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setMbFilterBrand(b)}
+                      className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                        mbFilterBrand === b ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30' : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                  {availableMbBrands.length > 5 && (
+                    <select
+                      value={mbFilterBrand}
+                      onChange={(e) => setMbFilterBrand(e.target.value)}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
+                    >
+                      <option value="All">Otras Marcas ({availableMbBrands.length})...</option>
+                      {availableMbBrands.filter(b => b !== 'All').map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {/* Buscador de Placas Base */}
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  value={mbSearch}
+                  onChange={(e) => setMbSearch(e.target.value)}
+                  placeholder="Buscar placa base (ej: B650, Z790, AM5, Gaming, WiFi)..."
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
+                />
+                {mbSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setMbSearch('')}
+                    className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {currentConfig.motherboard && (
+                <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">
+                    {currentConfig.motherboard.socket}
+                  </span>
+                  {currentConfig.cpu.socket && currentConfig.motherboard.socket && currentConfig.cpu.socket.toLowerCase() === currentConfig.motherboard.socket.toLowerCase() ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      Socket Compatible ✓
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      Socket Diferente ({currentConfig.cpu.socket} vs {currentConfig.motherboard.socket})
+                    </span>
+                  )}
+                  <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
+                    {currentConfig.motherboard.formFactor}
+                  </span>
+                  <span className="text-[10px] text-slate-500 ml-auto font-mono">
+                    {filteredMotherboards.length} disponibles
+                  </span>
+                </div>
+              )}
+
+              <select
+                id="diag-select-motherboard"
+                value={currentConfig.motherboard?.id || ''}
+                onChange={(e) => {
+                  const found = motherboards.find(m => m.id === e.target.value);
+                  if (found) updateConfig({ motherboard: found });
+                }}
+                className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
+              >
+                <option value="">Seleccionar Placa Base ({mbFilterBrand === 'All' ? 'Todas' : mbFilterBrand} • {filteredMotherboards.length} encontradas)...</option>
+                {/* Compatible socket motherboards first */}
+                {currentConfig.cpu.socket && filteredMotherboards.some(m => m.socket?.toLowerCase() === currentConfig.cpu.socket?.toLowerCase()) && (
+                  <optgroup label={`─── COMPATIBLES CON SOCKET ${currentConfig.cpu.socket.toUpperCase()} ───`}>
+                    {filteredMotherboards
+                      .filter(m => m.socket?.toLowerCase() === currentConfig.cpu.socket?.toLowerCase())
+                      .slice(0, 50)
+                      .map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.brand} {m.name} • {m.chipset} ({m.formFactor} • {m.memoryType})
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+                <optgroup label={`─── OTRAS PLACAS BASE (${mbFilterBrand === 'All' ? 'BUILDCORES OPEN DB' : mbFilterBrand.toUpperCase()}) ───`}>
+                  {filteredMotherboards
+                    .filter(m => !currentConfig.cpu.socket || m.socket?.toLowerCase() !== currentConfig.cpu.socket?.toLowerCase())
+                    .slice(0, 40)
+                    .map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.brand} {m.name} • Socket {m.socket} ({m.formFactor})
+                      </option>
+                    ))}
+                </optgroup>
+              </select>
+            </div>
+
+            {/* RAM Selector with Brand Filters */}
+            <div>
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
                   <Layers className="w-4 h-4 text-cyan-400" /> MEMORIA RAM
                 </label>
-                {currentConfig.ram.brand && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
-                    {currentConfig.ram.brand}
-                  </span>
+                {/* Brand Filter Pills for RAM */}
+                <div className="flex items-center gap-1 text-[11px] flex-wrap">
+                  {['All', 'Corsair', 'G.Skill', 'Kingston', 'Crucial'].map(b => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setRamFilterBrand(b)}
+                      className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                        ramFilterBrand === b ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30' : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                  {availableRamBrands.length > 5 && (
+                    <select
+                      value={ramFilterBrand}
+                      onChange={(e) => setRamFilterBrand(e.target.value)}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
+                    >
+                      <option value="All">Más Marcas ({availableRamBrands.length})...</option>
+                      {availableRamBrands.filter(b => b !== 'All').map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {/* Buscador de Memoria RAM */}
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  value={ramSearch}
+                  onChange={(e) => setRamSearch(e.target.value)}
+                  placeholder="Buscar RAM (ej: DDR5, 32GB, 6000MHz, Vengeance, RGB)..."
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all"
+                />
+                {ramSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setRamSearch('')}
+                    className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
+
               <select
                 id="diag-select-ram"
                 value={currentConfig.ram.id}
@@ -537,34 +792,70 @@ export const PcDiagnosisView: React.FC = () => {
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
-                <optgroup label="─── CORSAIR DOMINATOR & VENGEANCE HIGH-END ───">
-                  {rams.filter(r => r.brand === 'Corsair').map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.name || `${r.capacityGb}GB ${r.type}`} • {r.speedMhz}MHz (CL{r.casLatency})
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="─── G.SKILL & OTRAS MARCAS PREMIUM ───">
-                  {rams.filter(r => r.brand && r.brand !== 'Corsair').map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.name || `${r.capacityGb}GB ${r.type}`} • {r.speedMhz}MHz (CL{r.casLatency})
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="─── KITS ESTÁNDAR / REFERENCIA JEDEC ───">
-                  {rams.filter(r => !r.brand).map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.name || `${r.capacityGb}GB ${r.type} @ ${r.speedMhz}MHz`}
-                    </option>
-                  ))}
-                </optgroup>
+                {filteredRams.slice(0, 80).map(r => (
+                  <option key={r.id} value={r.id}>
+                    {r.brand ? `${r.brand} ` : ''}{r.name || `${r.capacityGb}GB ${r.type}`} • {r.speedMhz}MHz (CL{r.casLatency})
+                  </option>
+                ))}
               </select>
             </div>
 
+            {/* Storage Selector with Brand Filters */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2 mb-2">
-                <HardDrive className="w-4 h-4 text-cyan-400" /> ALMACENAMIENTO (SSD)
-              </label>
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                  <HardDrive className="w-4 h-4 text-cyan-400" /> ALMACENAMIENTO (SSD)
+                </label>
+                {/* Brand Filter Pills for Storage */}
+                <div className="flex items-center gap-1 text-[11px] flex-wrap">
+                  {['All', 'Samsung', 'Crucial', 'Kingston', 'WD', 'Corsair'].map(b => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setStorageFilterBrand(b)}
+                      className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                        storageFilterBrand === b ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30' : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                  {availableStorageBrands.length > 6 && (
+                    <select
+                      value={storageFilterBrand}
+                      onChange={(e) => setStorageFilterBrand(e.target.value)}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
+                    >
+                      <option value="All">Más Marcas ({availableStorageBrands.length})...</option>
+                      {availableStorageBrands.filter(b => b !== 'All').map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {/* Buscador de Almacenamiento */}
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  value={storageSearch}
+                  onChange={(e) => setStorageSearch(e.target.value)}
+                  placeholder="Buscar SSD/Disco (ej: 990 Pro, SN850X, NVMe, 2TB)..."
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all"
+                />
+                {storageSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setStorageSearch('')}
+                    className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
               <select
                 id="diag-select-storage"
                 value={currentConfig.storage.id}
@@ -574,52 +865,104 @@ export const PcDiagnosisView: React.FC = () => {
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
-                {storages.map(s => (
+                {filteredStorages.slice(0, 80).map(s => (
                   <option key={s.id} value={s.id}>
-                    {s.type} {s.capacityGb >= 1000 ? `${s.capacityGb / 1000}TB` : `${s.capacityGb}GB`} • ~{s.readSpeedMb} MB/s
+                    {s.brand ? `${s.brand} ` : ''}{s.type} {s.capacityGb >= 1000 ? `${s.capacityGb / 1000}TB` : `${s.capacityGb}GB`} • ~{s.readSpeedMb} MB/s
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Fuente de Poder (PSU) o Cargador de Laptop */}
+            {/* Fuente de Poder (PSU) con Filtro de Marcas */}
             <div className="pt-2 border-t border-slate-800/80">
-              <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
                   <Zap className="w-4 h-4 text-amber-400" />
-                  {isCurrentLaptop ? 'ALIMENTACIÓN / CARGADOR LAPTOP' : 'FUENTE DE PODER (PSU ACTUAL)'}
+                  {isCurrentLaptop ? 'ALIMENTACIÓN / CARGADOR LAPTOP' : 'FUENTE DE PODER (PSU)'}
                 </label>
-                {currentConfig.psu && (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {currentConfig.psu.brand === 'Corsair' && (
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                        CORSAIR
-                      </span>
-                    )}
-                    {currentConfig.psu.brand === 'Laptop Original' && (
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                        LAPTOP ADAPTER
-                      </span>
-                    )}
-                    {currentConfig.psu.atx3 && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-mono">
-                        ATX 3.1
-                      </span>
-                    )}
-                    <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded ${
-                      currentResult.powerStats.userPsuEvaluation?.status === 'optimal'
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        : currentResult.powerStats.userPsuEvaluation?.status === 'sufficient'
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                        : currentResult.powerStats.userPsuEvaluation?.status === 'tight'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                        : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                    }`}>
-                      {currentConfig.psu.wattage}W • {currentConfig.psu.efficiency}
-                    </span>
-                  </div>
+                {/* Brand Filter Pills for PSU */}
+                <div className="flex items-center gap-1 text-[11px] flex-wrap">
+                  {['All', 'Corsair', 'ASUS', 'Seasonic', 'MSI', 'be quiet!'].map(b => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setPsuFilterBrand(b)}
+                      className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                        psuFilterBrand === b ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30' : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                  {availablePsuBrands.length > 6 && (
+                    <select
+                      value={psuFilterBrand}
+                      onChange={(e) => setPsuFilterBrand(e.target.value)}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
+                    >
+                      <option value="All">Más Marcas ({availablePsuBrands.length})...</option>
+                      {availablePsuBrands.filter(b => b !== 'All').map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {/* Buscador de Fuentes de Poder */}
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  value={psuSearch}
+                  onChange={(e) => setPsuSearch(e.target.value)}
+                  placeholder="Buscar fuente de poder (ej: RM850x, 750W, Gold, Seasonic, ATX 3.0)..."
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
+                />
+                {psuSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setPsuSearch('')}
+                    className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
+
+              {currentConfig.psu && (
+                <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                  {currentConfig.psu.brand === 'Corsair' && (
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      CORSAIR
+                    </span>
+                  )}
+                  {currentConfig.psu.brand === 'Laptop Original' && (
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                      LAPTOP ADAPTER
+                    </span>
+                  )}
+                  {currentConfig.psu.atx3 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-mono">
+                      ATX 3.1
+                    </span>
+                  )}
+                  <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded ${
+                    currentResult.powerStats.userPsuEvaluation?.status === 'optimal'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : currentResult.powerStats.userPsuEvaluation?.status === 'sufficient'
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                      : currentResult.powerStats.userPsuEvaluation?.status === 'tight'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                  }`}>
+                    {currentConfig.psu.wattage}W • {currentConfig.psu.efficiency}
+                  </span>
+                  <span className="text-[10px] text-slate-500 ml-auto font-mono">
+                    {filteredPsus.length} disponibles
+                  </span>
+                </div>
+              )}
               <select
                 id="diag-select-psu"
                 value={currentConfig.psu?.id || ''}
@@ -630,33 +973,19 @@ export const PcDiagnosisView: React.FC = () => {
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
                 {/* Si es laptop, poner los cargadores de laptop arriba */}
-                {psus.some(p => p.brand === 'Laptop Original') && (
+                {filteredPsus.some(p => p.brand === 'Laptop Original') && (
                   <optgroup label="─── CARGADORES / ADAPTADORES DE NOTEBOOK ───">
-                    {psus.filter(p => p.brand === 'Laptop Original').map(p => (
+                    {filteredPsus.filter(p => p.brand === 'Laptop Original').map(p => (
                       <option key={p.id} value={p.id}>
                         {p.name}
                       </option>
                     ))}
                   </optgroup>
                 )}
-                <optgroup label="─── FUENTES CORSAIR (SHIFT, HX PLATINUM, AX TITANIUM & RM) ───">
-                  {psus.filter(p => p.brand === 'Corsair').map(p => (
+                <optgroup label={`─── FUENTES DE PODER (${psuFilterBrand === 'All' ? 'TODAS LAS MARCAS' : psuFilterBrand.toUpperCase()}) ───`}>
+                  {filteredPsus.filter(p => p.brand !== 'Laptop Original').slice(0, 80).map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="─── FUENTES PREMIUM (ASUS ROG, SEASONIC, BE QUIET!, MSI) ───">
-                  {psus.filter(p => p.brand && p.brand !== 'Corsair' && p.brand !== 'Genérica' && p.brand !== 'Laptop Original').map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="─── REFERENCIA ESTÁNDAR & FUENTES BÁSICAS ───">
-                  {psus.filter(p => !p.brand || p.brand === 'Genérica').map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
+                      {p.name} {p.brand && !p.name.includes(p.brand) ? `(${p.brand})` : ''} • {p.wattage}W ({p.efficiency})
                     </option>
                   ))}
                 </optgroup>

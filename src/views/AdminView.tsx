@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useHardware } from '../context/HardwareContext';
-import { CPU, GPU, MobileSoC, PSU, AdminStats } from '../types';
+import { CPU, GPU, MobileSoC, PSU, Motherboard, AdminStats } from '../types';
 import { INITIAL_ADMIN_STATS } from '../data/initialData';
 import { groupCpusByGeneration, getCpuGenerationMeta, KNOWN_CPU_GENERATIONS } from '../utils/cpuGenerations';
 import { groupGpusByGeneration, getGpuGenerationMeta, KNOWN_GPU_GENERATIONS } from '../utils/gpuGenerations';
@@ -36,6 +36,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ embedded = false }) => {
     gpus,
     socs,
     psus,
+    motherboards,
+    rams,
+    storages,
+    buildcoresMetadata,
+    isSyncingBuildCores,
+    syncBuildCores,
     addOrUpdateCpu,
     deleteCpu,
     addOrUpdateGpu,
@@ -43,13 +49,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ embedded = false }) => {
     addOrUpdateSoc,
     deleteSoc,
     addOrUpdatePsu,
-    deletePsu
+    deletePsu,
+    addOrUpdateMotherboard,
+    deleteMotherboard
   } = useHardware();
 
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState(false);
   const [stats, setStats] = useState<AdminStats>(INITIAL_ADMIN_STATS);
-  const [activeTab, setActiveTab] = useState<'stats' | 'cpus' | 'gpus' | 'socs' | 'psus'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'buildcores' | 'cpus' | 'gpus' | 'motherboards' | 'socs' | 'psus'>('stats');
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+  const [buildcoresTestQuery, setBuildcoresTestQuery] = useState('');
+  const [buildcoresTestCategory, setBuildcoresTestCategory] = useState<'cpus' | 'gpus' | 'motherboards' | 'psus' | 'rams' | 'storages'>('cpus');
+  const [adminMbSearch, setAdminMbSearch] = useState('');
+  const [adminMbSocket, setAdminMbSocket] = useState('All');
 
   // Filter states for CPU admin list
   const [adminCpuFilterBrand, setAdminCpuFilterBrand] = useState<'All' | 'AMD' | 'Intel'>('All');
@@ -436,8 +449,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ embedded = false }) => {
       <div className="flex flex-wrap items-center gap-2">
         {[
           { id: 'stats', label: 'Estadísticas & Métricas', icon: BarChart3 },
+          { id: 'buildcores', label: `BuildCores Open DB (${(buildcoresMetadata?.counts?.total || 20265).toLocaleString()})`, icon: Database },
           { id: 'cpus', label: `Procesadores (${cpus.length})`, icon: Cpu },
           { id: 'gpus', label: `Tarjetas Gráficas (${gpus.length})`, icon: Monitor },
+          { id: 'motherboards', label: `Placas Base (${motherboards.length})`, icon: Layers },
           { id: 'socs', label: `SoCs Móviles (${socs.length})`, icon: Smartphone },
           { id: 'psus', label: `Fuentes de Poder (${psus.length})`, icon: Zap }
         ].map(t => {
@@ -485,8 +500,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ embedded = false }) => {
 
             <div className="p-5 bg-slate-900/80 rounded-2xl border border-slate-800">
               <div className="text-[10px] text-slate-400 uppercase font-semibold">Hardware en Base</div>
-              <div className="text-3xl font-black text-teal-300 mt-1">{cpus.length + gpus.length + socs.length}</div>
-              <div className="text-[10px] text-slate-400 mt-1">Zero downtime sync</div>
+              <div className="text-3xl font-black text-teal-300 mt-1">{(buildcoresMetadata?.counts?.total || 20265).toLocaleString()}</div>
+              <div className="text-[10px] text-slate-400 mt-1">BuildCores Open DB sync</div>
             </div>
           </div>
 
@@ -535,6 +550,268 @@ export const AdminView: React.FC<AdminViewProps> = ({ embedded = false }) => {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: BUILDCORES GITHUB OPEN DB */}
+      {activeTab === 'buildcores' && (
+        <div className="space-y-6">
+          {/* Main Sync Card */}
+          <div className="p-6 bg-[#151921] border border-cyan-500/30 rounded-2xl space-y-6 shadow-xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 text-xs font-bold uppercase tracking-wider mb-2">
+                  <Database className="w-3.5 h-3.5" /> Sincronización Automática GitHub
+                </div>
+                <h3 className="text-xl font-black text-white flex items-center gap-2">
+                  <span>buildcores / buildcores-open-db</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                  Base de datos abierta comunitaria con especificaciones técnicas detalladas de CPUs, GPUs, Placas Base, Fuentes, Memorias RAM y Almacenamiento. Licencia Open Data Commons (ODC-By v1.0).
+                </p>
+                <div className="flex items-center gap-4 mt-3 text-xs text-slate-400">
+                  <a
+                    href="https://github.com/buildcores/buildcores-open-db"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-cyan-400 hover:text-cyan-200 flex items-center gap-1 font-mono font-bold"
+                  >
+                    <span>https://github.com/buildcores/buildcores-open-db</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Sync Trigger Button */}
+              <div className="flex flex-col items-end gap-2">
+                <button
+                  disabled={isSyncingBuildCores}
+                  onClick={async () => {
+                    setSyncStatusMsg('Sincronizando componentes desde GitHub...');
+                    const res = await syncBuildCores();
+                    setSyncStatusMsg(res.message);
+                    setTimeout(() => setSyncStatusMsg(null), 5000);
+                  }}
+                  className={`px-5 py-3 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer transition-all ${
+                    isSyncingBuildCores
+                      ? 'bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-700'
+                      : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black shadow-lg shadow-cyan-500/20'
+                  }`}
+                >
+                  <RefreshCw className={`w-4 h-4 ${isSyncingBuildCores ? 'animate-spin text-cyan-400' : 'text-slate-950'}`} />
+                  <span>{isSyncingBuildCores ? 'Descargando y Parseando...' : 'Sincronizar con GitHub Ahora'}</span>
+                </button>
+                {buildcoresMetadata?.synchronizedAt && (
+                  <span className="text-[11px] text-slate-500 font-mono">
+                    Última sincronización: {new Date(buildcoresMetadata.synchronizedAt).toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {syncStatusMsg && (
+              <div className="p-3 bg-cyan-950/60 border border-cyan-500/40 rounded-xl text-xs text-cyan-200 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span>{syncStatusMsg}</span>
+              </div>
+            )}
+
+            {/* Component Counts Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-slate-800">
+              <div className="p-4 bg-[#1C222D] rounded-xl border border-slate-700/80">
+                <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-1">
+                  <Cpu className="w-3.5 h-3.5 text-cyan-400" /> CPUs
+                </div>
+                <div className="text-2xl font-black text-white font-mono">{cpus.length.toLocaleString()}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Intel & AMD</div>
+              </div>
+
+              <div className="p-4 bg-[#1C222D] rounded-xl border border-slate-700/80">
+                <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-1">
+                  <Monitor className="w-3.5 h-3.5 text-indigo-400" /> GPUs
+                </div>
+                <div className="text-2xl font-black text-white font-mono">{gpus.length.toLocaleString()}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">NVIDIA, AMD & Intel</div>
+              </div>
+
+              <div className="p-4 bg-[#1C222D] rounded-xl border border-slate-700/80">
+                <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-1">
+                  <Layers className="w-3.5 h-3.5 text-emerald-400" /> Placas Base
+                </div>
+                <div className="text-2xl font-black text-white font-mono">{motherboards.length.toLocaleString()}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">AM5, AM4, LGA1700...</div>
+              </div>
+
+              <div className="p-4 bg-[#1C222D] rounded-xl border border-slate-700/80">
+                <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-1">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Fuentes (PSU)
+                </div>
+                <div className="text-2xl font-black text-white font-mono">{psus.length.toLocaleString()}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">ATX 3.1, Gold, Platin...</div>
+              </div>
+
+              <div className="p-4 bg-[#1C222D] rounded-xl border border-slate-700/80">
+                <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-1">
+                  <Layers className="w-3.5 h-3.5 text-teal-400" /> Memorias RAM
+                </div>
+                <div className="text-2xl font-black text-white font-mono">{rams.length.toLocaleString()}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">DDR5 & DDR4 Kits</div>
+              </div>
+
+              <div className="p-4 bg-[#1C222D] rounded-xl border border-slate-700/80">
+                <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-1">
+                  <Database className="w-3.5 h-3.5 text-purple-400" /> Almacenamiento
+                </div>
+                <div className="text-2xl font-black text-white font-mono">{storages.length.toLocaleString()}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">NVMe PCIe 4/5 & SATA</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Query Explorer in Admin */}
+          <div className="p-6 bg-[#151921] border border-slate-800 rounded-2xl space-y-4">
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-cyan-400" /> Explorador Rápido de Componentes Sincronizados
+            </h4>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { id: 'cpus', label: `CPUs (${cpus.length})` },
+                { id: 'gpus', label: `GPUs (${gpus.length})` },
+                { id: 'motherboards', label: `Placas Base (${motherboards.length})` },
+                { id: 'psus', label: `Fuentes (${psus.length})` },
+                { id: 'rams', label: `RAM (${rams.length})` },
+                { id: 'storages', label: `Almacenamiento (${storages.length})` }
+              ].map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => setBuildcoresTestCategory(c.id as any)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    buildcoresTestCategory === c.id
+                      ? 'bg-cyan-500 text-slate-950'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
+            <input
+              type="text"
+              value={buildcoresTestQuery}
+              onChange={e => setBuildcoresTestQuery(e.target.value)}
+              placeholder={`Filtrar en ${buildcoresTestCategory}... (ej: B650, RTX, 7800X3D, Corsair, 32GB)`}
+              className="w-full px-4 py-2.5 bg-[#1C222D] border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+            />
+
+            <div className="max-h-80 overflow-y-auto space-y-2 pr-1 text-xs">
+              {(() => {
+                const list: any[] =
+                  buildcoresTestCategory === 'cpus' ? cpus :
+                  buildcoresTestCategory === 'gpus' ? gpus :
+                  buildcoresTestCategory === 'motherboards' ? motherboards :
+                  buildcoresTestCategory === 'psus' ? psus :
+                  buildcoresTestCategory === 'rams' ? rams : storages;
+                const q = buildcoresTestQuery.toLowerCase().trim();
+                const filtered = list.filter(item =>
+                  !q ||
+                  (item.name && item.name.toLowerCase().includes(q)) ||
+                  (item.brand && item.brand.toLowerCase().includes(q)) ||
+                  (item.socket && item.socket.toLowerCase().includes(q))
+                );
+
+                return filtered.slice(0, 50).map((item: any) => (
+                  <div key={item.id} className="p-3 bg-[#1C222D] rounded-xl border border-slate-800 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 uppercase">
+                          {item.brand || 'BuildCores'}
+                        </span>
+                        <strong className="text-white font-medium">{item.name}</strong>
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-1 font-mono flex items-center gap-3">
+                        {item.socket && <span>Socket: {item.socket}</span>}
+                        {item.chipset && <span>Chipset: {item.chipset}</span>}
+                        {item.formFactor && <span>Formato: {item.formFactor}</span>}
+                        {item.tdp && <span>TDP: {item.tdp}W</span>}
+                        {item.vram && <span>VRAM: {item.vram}GB</span>}
+                        {item.wattage && <span>{item.wattage}W</span>}
+                        {item.capacityGb && <span>{item.capacityGb}GB</span>}
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500 shrink-0">{item.id}</span>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: MOTHERBOARDS */}
+      {activeTab === 'motherboards' && (
+        <div className="space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold text-white">Placas Base / Motherboards ({motherboards.length.toLocaleString()})</h3>
+              <p className="text-xs text-slate-400">Sincronizadas desde BuildCores Open DB con soporte para sockets AMD y Intel.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              value={adminMbSearch}
+              onChange={e => setAdminMbSearch(e.target.value)}
+              placeholder="Buscar placa base (ej: ASUS B650, MSI Z790, Gigabyte AM5)..."
+              className="flex-1 px-4 py-2.5 bg-[#1C222D] border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+            />
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+              {['All', 'AM5', 'AM4', 'LGA1700', 'LGA1851', 'LGA1200'].map(socket => (
+                <button
+                  key={socket}
+                  onClick={() => setAdminMbSocket(socket)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    adminMbSocket === socket
+                      ? 'bg-cyan-500 text-slate-950 font-black'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  {socket === 'All' ? 'Todos los Sockets' : socket}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {motherboards
+              .filter(mb => {
+                const matchSocket = adminMbSocket === 'All' || mb.socket === adminMbSocket;
+                const q = adminMbSearch.toLowerCase().trim();
+                const matchQ = !q || mb.name.toLowerCase().includes(q) || mb.brand.toLowerCase().includes(q) || (mb.chipset && mb.chipset.toLowerCase().includes(q));
+                return matchSocket && matchQ;
+              })
+              .slice(0, 36)
+              .map(mb => (
+                <div key={mb.id} className="p-4 bg-[#151921] border border-slate-800 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 uppercase">
+                      {mb.brand}
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
+                      {mb.socket}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-bold text-white line-clamp-2">{mb.name}</h4>
+                  <div className="text-xs text-slate-400 font-mono space-y-1 pt-1 border-t border-slate-800/80">
+                    <div className="flex justify-between"><span>Chipset:</span> <span className="text-slate-200">{mb.chipset}</span></div>
+                    <div className="flex justify-between"><span>Formato:</span> <span className="text-slate-200">{mb.formFactor}</span></div>
+                    <div className="flex justify-between"><span>Memoria:</span> <span className="text-slate-200">{mb.memoryType} (Max {mb.maxMemoryGb}GB)</span></div>
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
       )}

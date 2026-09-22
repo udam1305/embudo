@@ -9,8 +9,31 @@ import { groupGpusByGeneration, getGpuGenerationMeta } from '../utils/gpuGenerat
 export const PcComparatorView: React.FC = () => {
   const { cpus, gpus, rams, storages } = useHardware();
 
-  const cpuGroups = useMemo(() => groupCpusByGeneration(cpus), [cpus]);
-  const gpuGroups = useMemo(() => groupGpusByGeneration(gpus), [gpus]);
+  // Brand filters for Setup A and Setup B
+  const [cpuBrandA, setCpuBrandA] = useState<'All' | 'AMD' | 'Intel' | 'Apple'>('All');
+  const [gpuBrandA, setGpuBrandA] = useState<'All' | 'NVIDIA' | 'AMD' | 'Intel' | 'Apple'>('All');
+  const [cpuBrandB, setCpuBrandB] = useState<'All' | 'AMD' | 'Intel' | 'Apple'>('All');
+  const [gpuBrandB, setGpuBrandB] = useState<'All' | 'NVIDIA' | 'AMD' | 'Intel' | 'Apple'>('All');
+
+  const filteredCpuGroupsA = useMemo(() => {
+    const list = cpuBrandA === 'All' ? cpus : cpus.filter(c => c.brand === cpuBrandA);
+    return groupCpusByGeneration(list);
+  }, [cpus, cpuBrandA]);
+
+  const filteredGpuGroupsA = useMemo(() => {
+    const list = gpuBrandA === 'All' ? gpus : gpus.filter(g => g.brand === gpuBrandA);
+    return groupGpusByGeneration(list);
+  }, [gpus, gpuBrandA]);
+
+  const filteredCpuGroupsB = useMemo(() => {
+    const list = cpuBrandB === 'All' ? cpus : cpus.filter(c => c.brand === cpuBrandB);
+    return groupCpusByGeneration(list);
+  }, [cpus, cpuBrandB]);
+
+  const filteredGpuGroupsB = useMemo(() => {
+    const list = gpuBrandB === 'All' ? gpus : gpus.filter(g => g.brand === gpuBrandB);
+    return groupGpusByGeneration(list);
+  }, [gpus, gpuBrandB]);
 
   // Setup A (Default: 7800X3D + RTX 5070 Ti)
   const [setupA, setSetupA] = useState<DiagnosisConfig>(() => ({
@@ -107,16 +130,32 @@ export const PcComparatorView: React.FC = () => {
           {/* Selectors for Setup A */}
           <div className="space-y-3">
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">PROCESADOR A</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">PROCESADOR A</label>
+                <div className="flex items-center gap-1 text-[10px]">
+                  {(['All', 'AMD', 'Intel', 'Apple'] as const).map(b => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setCpuBrandA(b)}
+                      className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                        cpuBrandA === b ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30' : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <select
                 value={setupA.cpu.id}
                 onChange={(e) => {
                   const found = cpus.find(c => c.id === e.target.value);
                   if (found) setSetupA(prev => ({ ...prev, cpu: found }));
                 }}
-                className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer mt-1 focus:outline-none focus:border-cyan-500"
+                className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer focus:outline-none focus:border-cyan-500"
               >
-                {cpuGroups.map(group => (
+                {filteredCpuGroupsA.map(group => (
                   <optgroup key={group.id} label={`─── ${group.label.toUpperCase()} ───`}>
                     {group.cpus.map(c => (
                       <option key={c.id} value={c.id}>
@@ -129,9 +168,25 @@ export const PcComparatorView: React.FC = () => {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GRÁFICA A</label>
-                <span className="text-[10px] font-bold text-cyan-400 font-mono">{gpuMetaA.shortLabel}</span>
+              <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GRÁFICA A</label>
+                  <span className="text-[10px] font-bold text-cyan-400 font-mono">{gpuMetaA.shortLabel}</span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px]">
+                  {(['All', 'NVIDIA', 'AMD', 'Intel', 'Apple'] as const).map(b => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setGpuBrandA(b)}
+                      className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                        gpuBrandA === b ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30' : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                </div>
               </div>
               <select
                 value={setupA.gpu.id}
@@ -141,7 +196,7 @@ export const PcComparatorView: React.FC = () => {
                 }}
                 className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer focus:outline-none focus:border-cyan-500"
               >
-                {gpuGroups.map(group => (
+                {filteredGpuGroupsA.map(group => (
                   <optgroup key={group.id} label={`─── ${group.label.toUpperCase()} ───`}>
                     {group.gpus.map(g => (
                       <option key={g.id} value={g.id}>
@@ -206,16 +261,32 @@ export const PcComparatorView: React.FC = () => {
           {/* Selectors for Setup B */}
           <div className="space-y-3">
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">PROCESADOR B</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">PROCESADOR B</label>
+                <div className="flex items-center gap-1 text-[10px]">
+                  {(['All', 'AMD', 'Intel', 'Apple'] as const).map(b => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setCpuBrandB(b)}
+                      className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                        cpuBrandB === b ? 'bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30' : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <select
                 value={setupB.cpu.id}
                 onChange={(e) => {
                   const found = cpus.find(c => c.id === e.target.value);
                   if (found) setSetupB(prev => ({ ...prev, cpu: found }));
                 }}
-                className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer mt-1 focus:outline-none focus:border-cyan-500"
+                className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer focus:outline-none focus:border-cyan-500"
               >
-                {cpuGroups.map(group => (
+                {filteredCpuGroupsB.map(group => (
                   <optgroup key={group.id} label={`─── ${group.label.toUpperCase()} ───`}>
                     {group.cpus.map(c => (
                       <option key={c.id} value={c.id}>
@@ -228,9 +299,25 @@ export const PcComparatorView: React.FC = () => {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GRÁFICA B</label>
-                <span className="text-[10px] font-bold text-blue-400 font-mono">{gpuMetaB.shortLabel}</span>
+              <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GRÁFICA B</label>
+                  <span className="text-[10px] font-bold text-blue-400 font-mono">{gpuMetaB.shortLabel}</span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px]">
+                  {(['All', 'NVIDIA', 'AMD', 'Intel', 'Apple'] as const).map(b => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setGpuBrandB(b)}
+                      className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                        gpuBrandB === b ? 'bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30' : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                </div>
               </div>
               <select
                 value={setupB.gpu.id}
@@ -240,7 +327,7 @@ export const PcComparatorView: React.FC = () => {
                 }}
                 className="w-full px-3 py-2.5 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white cursor-pointer focus:outline-none focus:border-cyan-500"
               >
-                {gpuGroups.map(group => (
+                {filteredGpuGroupsB.map(group => (
                   <optgroup key={group.id} label={`─── ${group.label.toUpperCase()} ───`}>
                     {group.gpus.map(g => (
                       <option key={g.id} value={g.id}>

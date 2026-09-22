@@ -64,6 +64,20 @@ export interface Storage {
   readSpeedMb: number;
 }
 
+export interface Motherboard {
+  id: string;
+  name: string;
+  brand: string;
+  socket: string;
+  chipset: string;
+  formFactor: 'ATX' | 'Micro ATX' | 'Mini ITX' | 'E-ATX' | string;
+  memoryType: 'DDR5' | 'DDR4' | 'DDR3' | string;
+  maxMemoryGb?: number;
+  memorySlots?: number;
+  wifiSupport?: string;
+  sourceUrl?: string;
+}
+
 export interface PSU {
   id: string;
   name: string;
@@ -97,6 +111,7 @@ export interface DiagnosisConfig {
   ram: RAM;
   storage: Storage;
   psu?: PSU;
+  motherboard?: Motherboard;
   resolution: ResolutionType;
   workload: WorkloadType;
   workloads?: WorkloadType[];
@@ -236,4 +251,39 @@ export interface AdminStats {
   topMobileSocQueried: { name: string; count: number }[];
   lastDatabaseUpdate: string;
   activeUsers24h: number;
+}
+
+// --- Mobile Specs API (RevengerNick/mobile-specs-api) Types ---
+export interface ISmartphoneItem {
+  name: string;
+  slug: string;
+  imageUrl?: string;
+  detail_url: string;
+  rank?: number;
+  hits?: number;
+  brand?: string;
+}
+
+export interface ISmartphoneDetails {
+  brand: string;
+  model: string;
+  imageUrl?: string;
+  release_date: string;
+  dimensions: string;
+  os: string;
+  storage: string;
+  display?: string;
+  camera?: string;
+  ram?: string;
+  battery?: string;
+  chipset?: string;
+  specifications: Record<string, Record<string, string>>;
+}
+
+export interface IBrandItem {
+  brand_name: string;
+  brand_id: number;
+  brand_slug: string;
+  device_count: number;
+  detail_url: string;
 }
