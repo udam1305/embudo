@@ -123,8 +123,26 @@ export const PhoneDetailsModal: React.FC<PhoneDetailsModalProps> = ({
           )}
 
           {error && !loading && (
-            <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs">
-              {error}
+            <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span>{error}</span>
+              <button
+                onClick={() => {
+                  setError(null);
+                  setLoading(true);
+                  fetchPhoneDetails(slug)
+                    .then((data) => {
+                      setDetails(data);
+                      setLoading(false);
+                    })
+                    .catch((err) => {
+                      setError(err.message || 'No se pudieron cargar los detalles del dispositivo');
+                      setLoading(false);
+                    });
+                }}
+                className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-bold transition-colors cursor-pointer shrink-0"
+              >
+                Reintentar
+              </button>
             </div>
           )}
 

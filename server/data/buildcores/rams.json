@@ -21711,8 +21711,8 @@
   },
   {
     "id": "bc-ram-72912804-597c-4a6c-87d8-475c823b7c87",
-    "name": "Biwin White Opal DW100 DDR5-6000 32 GB CL28 RGB RAM ",
-    "brand": "Genérica",
+    "name": "Biwin White Opal DW100 DDR5-6000 32 GB CL28 RGB RAM",
+    "brand": "Biwin",
     "type": "DDR5",
     "capacityGb": 32,
     "speedMhz": 6000,
@@ -29802,7 +29802,7 @@
   {
     "id": "bc-ram-9f500ba1-e7e2-4ea4-a6b6-1b6efcba4ef0",
     "name": "GIGASTONE Game PRO 32GB Kit (2x16GB) DDR4 3600MHz CL18 White",
-    "brand": "Genérica",
+    "brand": "Gigastone",
     "type": "DDR4",
     "capacityGb": 32,
     "speedMhz": 3600,

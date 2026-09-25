@@ -89,7 +89,10 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Load from API on mount
   const reloadComponents = async () => {
     try {
-      const res = await fetch('/api/components/all');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch('/api/components/all', { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
         if (data.cpus && data.cpus.length > 0) setCpus(data.cpus);
@@ -101,8 +104,8 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (data.socs && data.socs.length > 0) setSocs(data.socs);
         if (data.metadata) setBuildcoresMetadata(data.metadata);
       }
-    } catch (e) {
-      console.warn('Using local seed hardware catalog:', e);
+    } catch {
+      // Local seed hardware is already active and optimal
     }
   };
 

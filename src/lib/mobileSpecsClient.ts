@@ -16,17 +16,26 @@ async function cachedFetch<T>(url: string): Promise<T> {
     return cached.data;
   }
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Error en API (${response.status}): ${response.statusText}`);
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      if (cached) return cached.data;
+      throw new Error(`Error en API (${response.status}): ${response.statusText}`);
+    }
+    const json = await response.json();
+    if (json.status === false && json.error) {
+      if (cached) return cached.data;
+      throw new Error(json.error);
+    }
+    const result = json.data ?? json;
+    clientCache.set(url, { timestamp: Date.now(), data: result });
+    return result;
+  } catch (err: any) {
+    if (cached) {
+      return cached.data;
+    }
+    throw err;
   }
-  const json = await response.json();
-  if (json.status === false && json.error) {
-    throw new Error(json.error);
-  }
-  const result = json.data ?? json;
-  clientCache.set(url, { timestamp: Date.now(), data: result });
-  return result;
 }
 
 export function isWatchOrWearable(name: string = '', slug: string = ''): boolean {
@@ -78,11 +87,16 @@ export async function fetchTopByFans(): Promise<ISmartphoneItem[]> {
 export async function searchSmartphones(query: string): Promise<ISmartphoneItem[]> {
   const clean = query.trim();
   if (!clean) return [];
-  const res = await fetch(`/api/phones/search?query=${encodeURIComponent(clean)}`);
-  if (!res.ok) throw new Error('Error al buscar teléfonos');
-  const json = await res.json();
-  const rawList: ISmartphoneItem[] = json.data || [];
-  return filterOnlyPhones(rawList);
+  try {
+    const res = await fetch(`/api/phones/search?query=${encodeURIComponent(clean)}`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    const rawList: ISmartphoneItem[] = json.data || [];
+    return filterOnlyPhones(rawList);
+  } catch (err) {
+    console.warn('[Client] Search fetch error:', err);
+    return [];
+  }
 }
 
 export async function fetchPhoneDetails(slug: string): Promise<ISmartphoneDetails> {

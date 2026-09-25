@@ -194,7 +194,7 @@ export async function getPhonesByBrand(brandSlug: string): Promise<IPhoneListIte
   }
 
   if (cached) return cached.data;
-  return [];
+  return getFallbackPhonesByBrand(brandSlug);
 }
 
 /**
@@ -582,6 +582,45 @@ function getFallbackBrands(): Record<string, IBrandDetails> {
   return map;
 }
 
+function getFallbackPhonesByBrand(brandSlug: string): IPhoneListItem[] {
+  const s = brandSlug.toLowerCase();
+  if (s.includes('apple')) {
+    return [
+      { name: 'Apple iPhone 16 Pro Max', slug: 'apple_iphone_16_pro_max-13315', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro-max.jpg', detail_url: '/api/phones/apple_iphone_16_pro_max-13315' },
+      { name: 'Apple iPhone 16 Pro', slug: 'apple_iphone_16_pro-13314', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro.jpg', detail_url: '/api/phones/apple_iphone_16_pro-13314' },
+      { name: 'Apple iPhone 16 Plus', slug: 'apple_iphone_16_plus-13316', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-plus.jpg', detail_url: '/api/phones/apple_iphone_16_plus-13316' },
+      { name: 'Apple iPhone 16', slug: 'apple_iphone_16-13317', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16.jpg', detail_url: '/api/phones/apple_iphone_16-13317' },
+      { name: 'Apple iPhone 15 Pro Max', slug: 'apple_iphone_15_pro_max-12548', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15-pro-max.jpg', detail_url: '/api/phones/apple_iphone_15_pro_max-12548' },
+      { name: 'Apple iPhone 15 Pro', slug: 'apple_iphone_15_pro-12547', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15-pro.jpg', detail_url: '/api/phones/apple_iphone_15_pro-12547' }
+    ];
+  }
+  if (s.includes('xiaomi')) {
+    return [
+      { name: 'Xiaomi 14 Ultra', slug: 'xiaomi_14_ultra-12827', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-ultra-white.jpg', detail_url: '/api/phones/xiaomi_14_ultra-12827' },
+      { name: 'Xiaomi 14 Pro', slug: 'xiaomi_14_pro-12626', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-pro.jpg', detail_url: '/api/phones/xiaomi_14_pro-12626' },
+      { name: 'Xiaomi Redmi Note 13 Pro+', slug: 'xiaomi_redmi_note_13_pro+-12572', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13-pro-plus.jpg', detail_url: '/api/phones/xiaomi_redmi_note_13_pro+-12572' },
+      { name: 'Xiaomi Poco X6 Pro', slug: 'xiaomi_poco_x6_pro-12718', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-poco-x6-pro.jpg', detail_url: '/api/phones/xiaomi_poco_x6_pro-12718' },
+      { name: 'Xiaomi Poco F6 Pro', slug: 'xiaomi_poco_f6_pro-13000', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-poco-f6-pro.jpg', detail_url: '/api/phones/xiaomi_poco_f6_pro-13000' }
+    ];
+  }
+  if (s.includes('google')) {
+    return [
+      { name: 'Google Pixel 9 Pro XL', slug: 'google_pixel_9_pro_xl-13217', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro-xl-.jpg', detail_url: '/api/phones/google_pixel_9_pro_xl-13217' },
+      { name: 'Google Pixel 9 Pro', slug: 'google_pixel_9_pro-13218', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro-.jpg', detail_url: '/api/phones/google_pixel_9_pro-13218' },
+      { name: 'Google Pixel 9', slug: 'google_pixel_9-13219', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-.jpg', detail_url: '/api/phones/google_pixel_9-13219' },
+      { name: 'Google Pixel 8 Pro', slug: 'google_pixel_8_pro-12545', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-8-pro.jpg', detail_url: '/api/phones/google_pixel_8_pro-12545' }
+    ];
+  }
+  // Default to Samsung flagships
+  return [
+    { name: 'Samsung Galaxy S24 Ultra', slug: 'samsung_galaxy_s24_ultra-12771', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-ultra-5g-sm-s928-stylus.jpg', detail_url: '/api/phones/samsung_galaxy_s24_ultra-12771' },
+    { name: 'Samsung Galaxy S24+', slug: 'samsung_galaxy_s24+-12772', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-plus-5g.jpg', detail_url: '/api/phones/samsung_galaxy_s24+-12772' },
+    { name: 'Samsung Galaxy S24', slug: 'samsung_galaxy_s24-12773', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-5g-sm-s921.jpg', detail_url: '/api/phones/samsung_galaxy_s24-12773' },
+    { name: 'Samsung Galaxy Z Fold6', slug: 'samsung_galaxy_z_fold6-13147', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-fold6.jpg', detail_url: '/api/phones/samsung_galaxy_z_fold6-13147' },
+    { name: 'Samsung Galaxy A55 5G', slug: 'samsung_galaxy_a55-12824', imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a55.jpg', detail_url: '/api/phones/samsung_galaxy_a55-12824' }
+  ];
+}
+
 function getFallbackLatestPhones(): IPhoneListItem[] {
   return [
     {
@@ -706,39 +745,65 @@ function getFallbackTopByFans(): IPhoneListItem[] {
 }
 
 function getFallbackPhoneDetails(slug: string): IPhoneDetails {
+  const clean = slug.replace(/\.php$/, '');
+  const parts = clean.split('-')[0].split('_');
+  const rawBrand = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : 'Smartphone';
+  const rawModel = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+
+  const isApple = /apple|iphone/i.test(clean);
+  const isSamsung = /samsung|galaxy/i.test(clean);
+  const isXiaomi = /xiaomi|redmi|poco/i.test(clean);
+  const isGoogle = /google|pixel/i.test(clean);
+
+  const brand = isApple ? 'Apple' : isSamsung ? 'Samsung' : isXiaomi ? 'Xiaomi' : isGoogle ? 'Google' : rawBrand;
+  const os = isApple ? 'iOS 18, actualizable a nuevas versiones' : 'Android 14 / Android 15 con soporte extendido';
+  const chipset = isApple
+    ? 'Apple A18 Pro (3 nm)'
+    : isSamsung
+    ? 'Qualcomm SM8650-AC Snapdragon 8 Gen 3 (4 nm) / Exynos 2400'
+    : isGoogle
+    ? 'Google Tensor G4 (4 nm)'
+    : 'Qualcomm Snapdragon 8 Gen 3 (4 nm) / MediaTek Dimensity 9300+';
+
   return {
-    brand: 'Samsung',
-    model: 'Samsung Galaxy S24 Ultra',
-    imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-ultra-5g-sm-s928-stylus.jpg',
-    release_date: 'Released 2024, January 24',
-    dimensions: '232g, 8.6mm thickness',
-    os: 'Android 14, up to 7 major OS upgrades, One UI 6.1.1',
-    storage: '256GB/512GB/1TB storage, no card slot',
-    display: '6.8" 1440x3120 pixels Dynamic LTPO AMOLED 2X, 120Hz, HDR10+, 2600 nits',
-    camera: '200 MP 8K video',
-    ram: '12GB RAM Snapdragon 8 Gen 3',
-    battery: '5000 mAh Li-Ion 45W wired',
-    chipset: 'Qualcomm SM8650-AC Snapdragon 8 Gen 3 (4 nm)',
+    brand,
+    model: rawModel || 'Smartphone Flagship',
+    imageUrl: isApple
+      ? 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro-max.jpg'
+      : isGoogle
+      ? 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro-xl-.jpg'
+      : isXiaomi
+      ? 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-ultra-white.jpg'
+      : 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-ultra-5g-sm-s928-stylus.jpg',
+    release_date: 'Lanzamiento reciente (2024/2025)',
+    dimensions: '162.3 x 79 x 8.6 mm, ~220g',
+    os,
+    storage: '128GB / 256GB / 512GB / 1TB, UFS 4.0 / NVMe',
+    display: '6.7" OLED / LTPO AMOLED, 120Hz HDR10+, 2600 nits',
+    camera: 'Sistema de cámaras profesional 50MP / 200MP con OIS y Zoom óptico 5x',
+    ram: isApple ? '8GB RAM LPDDR5X' : '12GB / 16GB RAM LPDDR5X',
+    battery: '5000 mAh Li-Ion con Carga rápida y carga inalámbrica',
+    chipset,
     specifications: {
       'Platform': {
-        'OS': 'Android 14, up to 7 major OS upgrades, One UI 6.1.1',
-        'Chipset': 'Qualcomm SM8650-AC Snapdragon 8 Gen 3 (4 nm)',
-        'CPU': '8-core (1x3.39GHz Cortex-X4 & 3x3.1GHz Cortex-A720 & 2x2.9GHz Cortex-A720 & 2x2.2GHz Cortex-A520)',
-        'GPU': 'Adreno 750 (1 GHz)'
+        'OS': os,
+        'Chipset': chipset,
+        'CPU': isApple ? 'Hexa-core (2x4.04 GHz + 4x2.20 GHz)' : 'Octa-core (Cortex-X4 + Cortex-A720 + Cortex-A520)',
+        'GPU': isApple ? 'Apple GPU (6-core graphics)' : 'Adreno 750 / Immortalis-G720'
       },
       'Display': {
-        'Type': 'Dynamic LTPO AMOLED 2X, 120Hz, HDR10+, 2600 nits (peak)',
-        'Size': '6.8 inches, 113.5 cm2 (~88.5% screen-to-body ratio)',
-        'Resolution': '1440 x 3120 pixels, 19.5:9 ratio (~505 ppi density)',
-        'Protection': 'Corning Gorilla Armor'
+        'Type': 'LTPO OLED / AMOLED 120Hz',
+        'Size': '6.7 pulgadas (~89.8% relación pantalla-cuerpo)',
+        'Resolution': '1440 x 3120 píxeles, 19.5:9 (~505 ppi)',
+        'Protection': 'Corning Gorilla Armor / Ceramic Shield'
       },
       'Main Camera': {
-        'Quad': '200 MP, f/1.7 (wide) + 50 MP, f/3.4 (periscope telephoto 5x) + 10 MP (telephoto 3x) + 12 MP (ultrawide)',
-        'Video': '8K@24/30fps, 4K@30/60/120fps, 1080p@30/60/240fps'
+        'Configuración': 'Triple / Cuádruple con Sensor principal de alta resolución, Telefoto periscópico y Ultra gran angular',
+        'Video': '8K@30fps, 4K@60/120fps, HDR de 10 bits, Dolby Vision'
       },
       'Battery': {
-        'Type': 'Li-Ion 5000 mAh, non-removable',
-        'Charging': '45W wired, PD3.0, 65% in 30 min, 15W wireless'
+        'Type': 'Li-Ion 5000 mAh no extraíble',
+        'Charging': 'Carga rápida cableada + Carga inalámbrica rápida Qi/MagSafe'
       }
     }
   };

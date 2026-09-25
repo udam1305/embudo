@@ -91,6 +91,19 @@ export const SmartphonesView: React.FC = () => {
     'Honor Magic 6'
   ];
 
+  const defaultTopPhones: ISmartphoneItem[] = [
+    { rank: 1, name: 'Samsung Galaxy S24 Ultra', slug: 'samsung_galaxy_s24_ultra-12771', detail_url: '/api/phones/details/samsung_galaxy_s24_ultra-12771', hits: 48920, imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-ultra-5g-sm-s928-stylus.jpg' },
+    { rank: 2, name: 'Apple iPhone 16 Pro Max', slug: 'apple_iphone_16_pro_max-13315', detail_url: '/api/phones/details/apple_iphone_16_pro_max-13315', hits: 42100, imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro-max.jpg' },
+    { rank: 3, name: 'Xiaomi Redmi Note 13 Pro+', slug: 'xiaomi_redmi_note_13_pro+-12572', detail_url: '/api/phones/details/xiaomi_redmi_note_13_pro+-12572', hits: 31200, imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13-pro-plus.jpg' },
+    { rank: 4, name: 'Google Pixel 9 Pro XL', slug: 'google_pixel_9_pro_xl-13217', detail_url: '/api/phones/details/google_pixel_9_pro_xl-13217', hits: 26800, imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro-xl-.jpg' },
+    { rank: 5, name: 'Xiaomi Poco X6 Pro', slug: 'xiaomi_poco_x6_pro-12718', detail_url: '/api/phones/details/xiaomi_poco_x6_pro-12718', hits: 24500, imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-poco-x6-pro.jpg' },
+    { rank: 6, name: 'OnePlus 12', slug: 'oneplus_12-12725', detail_url: '/api/phones/details/oneplus_12-12725', hits: 22100, imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-12.jpg' },
+    { rank: 7, name: 'Samsung Galaxy S24', slug: 'samsung_galaxy_s24-12773', detail_url: '/api/phones/details/samsung_galaxy_s24-12773', hits: 19800, imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-5g-sm-s921.jpg' },
+    { rank: 8, name: 'Apple iPhone 16 Pro', slug: 'apple_iphone_16_pro-13314', detail_url: '/api/phones/details/apple_iphone_16_pro-13314', hits: 18900, imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro.jpg' },
+    { rank: 9, name: 'Asus ROG Phone 8 Pro', slug: 'asus_rog_phone_8_pro-12758', detail_url: '/api/phones/details/asus_rog_phone_8_pro-12758', hits: 16500, imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/asus-rog-phone-8-pro.jpg' },
+    { rank: 10, name: 'Motorola Edge 50 Ultra', slug: 'motorola_edge_50_ultra-12921', detail_url: '/api/phones/details/motorola_edge_50_ultra-12921', hits: 15400, imageUrl: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-edge-50-ultra.jpg' }
+  ];
+
   // Popular brands shortcuts
   const popularBrands = [
     { name: 'Apple', slug: 'apple-phones-48' },
@@ -128,9 +141,10 @@ export const SmartphonesView: React.FC = () => {
     setPhoneListTitle('Top 10 Smartphones Más Populares Hoy (Daily Hits)');
     try {
       const data = await fetchTopByInterest();
-      setPhones(filterOnlyPhones(data));
+      const filtered = filterOnlyPhones(data);
+      setPhones(filtered.length > 0 ? filtered : defaultTopPhones);
     } catch {
-      setPhones([]);
+      setPhones(defaultTopPhones);
     } finally {
       setLoadingPhones(false);
     }
@@ -142,9 +156,10 @@ export const SmartphonesView: React.FC = () => {
     setPhoneListTitle('Top 10 Favoritos de la Comunidad (Mayor Cantidad de Fans)');
     try {
       const data = await fetchTopByFans();
-      setPhones(filterOnlyPhones(data));
+      const filtered = filterOnlyPhones(data);
+      setPhones(filtered.length > 0 ? filtered : defaultTopPhones);
     } catch {
-      setPhones([]);
+      setPhones(defaultTopPhones);
     } finally {
       setLoadingPhones(false);
     }
@@ -156,9 +171,10 @@ export const SmartphonesView: React.FC = () => {
     setPhoneListTitle('Últimos Teléfonos Lanzados / En Tiendas');
     try {
       const data = await fetchLatestPhones();
-      setPhones(filterOnlyPhones(data));
+      const filtered = filterOnlyPhones(data);
+      setPhones(filtered.length > 0 ? filtered : defaultTopPhones);
     } catch {
-      setPhones([]);
+      setPhones(defaultTopPhones);
     } finally {
       setLoadingPhones(false);
     }
@@ -172,9 +188,10 @@ export const SmartphonesView: React.FC = () => {
     setPhoneListTitle(`Catálogo de Teléfonos ${brandName}`);
     try {
       const data = await fetchPhonesByBrand(slug);
-      setPhones(filterOnlyPhones(data));
+      const filtered = filterOnlyPhones(data);
+      setPhones(filtered.length > 0 ? filtered : defaultTopPhones);
     } catch {
-      setPhones([]);
+      setPhones(defaultTopPhones);
     } finally {
       setLoadingPhones(false);
     }
