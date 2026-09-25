@@ -1,4 +1,4 @@
-import { CPU, GPU, RAM, Storage, PSU, MobileSoC, PrebuiltPC, AdminStats } from '../types';
+import { CPU, GPU, RAM, Storage, PSU, Motherboard, MobileSoC, PrebuiltPC, AdminStats } from '../types';
 
 export const INITIAL_CPUS: CPU[] = [
   // =========================================================================
@@ -4484,6 +4484,105 @@ export const INITIAL_PREBUILTS: PrebuiltPC[] = [
     estimatedPriceUsd: 1999,
     bottleneckScore: 2.2,
     highlights: ['Peso de solo 1.85 kg y grosor de 1.49 cm', 'NPU de 50 TOPS para IA generativa y Copilot+', 'Pantalla ROG Nebula OLED con G-SYNC']
+  }
+];
+
+export const INITIAL_MOTHERBOARDS: Motherboard[] = [
+  {
+    id: 'mb-asus-b650-plus-wifi',
+    name: 'ASUS TUF GAMING B650-PLUS WIFI (AM5 DDR5)',
+    brand: 'ASUS',
+    socket: 'AM5',
+    chipset: 'AMD B650',
+    formFactor: 'ATX',
+    memoryType: 'DDR5',
+    maxMemoryGb: 192,
+    memorySlots: 4,
+    wifiSupport: 'WiFi 6E'
+  },
+  {
+    id: 'mb-msi-b650-tomahawk',
+    name: 'MSI MAG B650 TOMAHAWK WIFI (AM5 DDR5)',
+    brand: 'MSI',
+    socket: 'AM5',
+    chipset: 'AMD B650',
+    formFactor: 'ATX',
+    memoryType: 'DDR5',
+    maxMemoryGb: 192,
+    memorySlots: 4,
+    wifiSupport: 'WiFi 6E'
+  },
+  {
+    id: 'mb-gigabyte-x670-aorus-elite',
+    name: 'Gigabyte X670 AORUS ELITE AX (AM5 DDR5)',
+    brand: 'Gigabyte',
+    socket: 'AM5',
+    chipset: 'AMD X670',
+    formFactor: 'ATX',
+    memoryType: 'DDR5',
+    maxMemoryGb: 192,
+    memorySlots: 4,
+    wifiSupport: 'WiFi 6E'
+  },
+  {
+    id: 'mb-asus-z790-aorus',
+    name: 'ASUS ROG STRIX Z790-E GAMING WIFI II (LGA1700 DDR5)',
+    brand: 'ASUS',
+    socket: 'LGA1700',
+    chipset: 'Intel Z790',
+    formFactor: 'ATX',
+    memoryType: 'DDR5',
+    maxMemoryGb: 192,
+    memorySlots: 4,
+    wifiSupport: 'WiFi 7'
+  },
+  {
+    id: 'mb-msi-z790-gaming-plus',
+    name: 'MSI PRO Z790-A MAX WIFI (LGA1700 DDR5)',
+    brand: 'MSI',
+    socket: 'LGA1700',
+    chipset: 'Intel Z790',
+    formFactor: 'ATX',
+    memoryType: 'DDR5',
+    maxMemoryGb: 192,
+    memorySlots: 4,
+    wifiSupport: 'WiFi 7'
+  },
+  {
+    id: 'mb-asrock-b760-pro-rs',
+    name: 'ASRock B760 Pro RS (LGA1700 DDR5)',
+    brand: 'ASRock',
+    socket: 'LGA1700',
+    chipset: 'Intel B760',
+    formFactor: 'ATX',
+    memoryType: 'DDR5',
+    maxMemoryGb: 128,
+    memorySlots: 4,
+    wifiSupport: 'No'
+  },
+  {
+    id: 'mb-msi-b550-tomahawk',
+    name: 'MSI MAG B550 TOMAHAWK (AM4 DDR4)',
+    brand: 'MSI',
+    socket: 'AM4',
+    chipset: 'AMD B550',
+    formFactor: 'ATX',
+    memoryType: 'DDR4',
+    maxMemoryGb: 128,
+    memorySlots: 4,
+    wifiSupport: 'No'
+  },
+  {
+    id: 'mb-asus-b550-plus-wifi',
+    name: 'ASUS TUF GAMING B550-PLUS WIFI II (AM4 DDR4)',
+    brand: 'ASUS',
+    socket: 'AM4',
+    chipset: 'AMD B550',
+    formFactor: 'ATX',
+    memoryType: 'DDR4',
+    maxMemoryGb: 128,
+    memorySlots: 4,
+    wifiSupport: 'WiFi 6'
   }
 ];
 

@@ -6,6 +6,7 @@ import {
   INITIAL_RAMS,
   INITIAL_STORAGES,
   INITIAL_PSUS,
+  INITIAL_MOTHERBOARDS,
   INITIAL_SOCS,
   INITIAL_PREBUILTS
 } from '../data/initialData';
@@ -68,7 +69,7 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [rams, setRams] = useState<RAM[]>(INITIAL_RAMS);
   const [storages, setStorages] = useState<Storage[]>(INITIAL_STORAGES);
   const [psus, setPsus] = useState<PSU[]>(INITIAL_PSUS);
-  const [motherboards, setMotherboards] = useState<Motherboard[]>([]);
+  const [motherboards, setMotherboards] = useState<Motherboard[]>(INITIAL_MOTHERBOARDS);
   const [socs, setSocs] = useState<MobileSoC[]>(INITIAL_SOCS);
   const [prebuilts, setPrebuilts] = useState<PrebuiltPC[]>(INITIAL_PREBUILTS);
   const [buildcoresMetadata, setBuildcoresMetadata] = useState<any>(null);
