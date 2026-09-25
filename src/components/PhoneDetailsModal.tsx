@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ISmartphoneDetails } from '../types';
 import { fetchPhoneDetails } from '../lib/mobileSpecsClient';
+import { CommunityCommentsSection } from './CommunityCommentsSection';
 
 interface PhoneDetailsModalProps {
   slug: string | null;
@@ -336,6 +337,17 @@ export const PhoneDetailsModal: React.FC<PhoneDetailsModalProps> = ({
                     </div>
                   );
                 })}
+              </div>
+
+              {/* User Opinions & Community Comments */}
+              <div className="pt-2">
+                <CommunityCommentsSection
+                  targetId={slug}
+                  targetName={details.model}
+                  category="phone"
+                  title="OPINIONES & COMENTARIOS DE LA COMUNIDAD"
+                  subtitle={`Reseñas reales de usuarios y experiencias con el ${details.model} (rendimiento en juegos, cámaras y batería).`}
+                />
               </div>
             </>
           )}

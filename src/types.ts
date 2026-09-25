@@ -287,3 +287,20 @@ export interface IBrandItem {
   device_count: number;
   detail_url: string;
 }
+
+export interface CommunityComment {
+  id: string;
+  targetId: string;
+  category: 'phone' | 'pc' | 'soc';
+  author: string;
+  rating: number; // 1-5
+  date: string;
+  title: string;
+  content: string;
+  likes: number;
+  userLiked?: boolean;
+  verified?: boolean;
+  badge?: string;
+  pros?: string[];
+  cons?: string[];
+}

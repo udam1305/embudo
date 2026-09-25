@@ -26,12 +26,14 @@ import {
   LayoutGrid,
   Laptop,
   BatteryCharging,
-  Thermometer
+  Thermometer,
+  MessageSquare
 } from 'lucide-react';
 import { useHardware } from '../context/HardwareContext';
 import { useAuth } from '../context/AuthContext';
 import { CPU, GPU, RAM, Storage, Motherboard, ResolutionType, WorkloadType, UpscalingTechnology, UpscalingMode } from '../types';
 import { ExportCardModal } from '../components/ExportCardModal';
+import { CommunityCommentsSection } from '../components/CommunityCommentsSection';
 import { groupCpusByGeneration, getCpuGenerationMeta, KNOWN_CPU_GENERATIONS } from '../utils/cpuGenerations';
 import { groupGpusByGeneration, getGpuGenerationMeta, KNOWN_GPU_GENERATIONS } from '../utils/gpuGenerations';
 import confetti from 'canvas-confetti';
@@ -445,8 +447,14 @@ export const PcDiagnosisView: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
               <div className="relative">
+                <label htmlFor="diag-cpu-search-input" className="sr-only">
+                  Buscar modelo de procesador o socket
+                </label>
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
                 <input
+                  id="diag-cpu-search-input"
+                  name="cpuSearch"
+                  aria-label="Buscar modelo de procesador o socket"
                   type="text"
                   value={cpuSearch}
                   onChange={(e) => setCpuSearch(e.target.value)}
@@ -455,22 +463,35 @@ export const PcDiagnosisView: React.FC = () => {
                 />
               </div>
 
-              <select
-                value={cpuFilterGen}
-                onChange={(e) => setCpuFilterGen(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
-              >
-                <option value="All">⚡ Todas las Generaciones</option>
-                {availableGenerations.map(g => (
-                  <option key={g.id} value={g.id}>
-                    {g.shortLabel}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <label htmlFor="diag-cpu-filter-gen" className="sr-only">
+                  Filtrar por generación de procesador
+                </label>
+                <select
+                  id="diag-cpu-filter-gen"
+                  name="cpuFilterGen"
+                  aria-label="Filtrar por generación de procesador"
+                  value={cpuFilterGen}
+                  onChange={(e) => setCpuFilterGen(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                >
+                  <option value="All">⚡ Todas las Generaciones</option>
+                  {availableGenerations.map(g => (
+                    <option key={g.id} value={g.id}>
+                      {g.shortLabel}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
+            <label htmlFor="diag-select-cpu" className="sr-only">
+              Seleccionar procesador para diagnóstico
+            </label>
             <select
               id="diag-select-cpu"
+              name="selectedCpu"
+              aria-label="Seleccionar procesador para diagnóstico"
               value={currentConfig.cpu.id}
               onChange={(e) => {
                 const found = cpus.find(c => c.id === e.target.value);
@@ -540,8 +561,14 @@ export const PcDiagnosisView: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
               <div className="relative">
+                <label htmlFor="diag-gpu-search-input" className="sr-only">
+                  Buscar modelo de tarjeta gráfica
+                </label>
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
                 <input
+                  id="diag-gpu-search-input"
+                  name="gpuSearch"
+                  aria-label="Buscar modelo de tarjeta gráfica"
                   type="text"
                   value={gpuSearch}
                   onChange={(e) => setGpuSearch(e.target.value)}
@@ -550,22 +577,35 @@ export const PcDiagnosisView: React.FC = () => {
                 />
               </div>
 
-              <select
-                value={gpuFilterGen}
-                onChange={(e) => setGpuFilterGen(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
-              >
-                <option value="All">⚡ Todas las Familias ({filteredGpus.length})</option>
-                {availableGpuGenerations.map(g => (
-                  <option key={g.id} value={g.id}>
-                    {g.shortLabel}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <label htmlFor="diag-gpu-filter-gen" className="sr-only">
+                  Filtrar por familia de tarjeta gráfica
+                </label>
+                <select
+                  id="diag-gpu-filter-gen"
+                  name="gpuFilterGen"
+                  aria-label="Filtrar por familia de tarjeta gráfica"
+                  value={gpuFilterGen}
+                  onChange={(e) => setGpuFilterGen(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                >
+                  <option value="All">⚡ Todas las Familias ({filteredGpus.length})</option>
+                  {availableGpuGenerations.map(g => (
+                    <option key={g.id} value={g.id}>
+                      {g.shortLabel}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
+            <label htmlFor="diag-select-gpu" className="sr-only">
+              Seleccionar tarjeta gráfica para diagnóstico
+            </label>
             <select
               id="diag-select-gpu"
+              name="selectedGpu"
+              aria-label="Seleccionar tarjeta gráfica para diagnóstico"
               value={currentConfig.gpu.id}
               onChange={(e) => {
                 const found = gpus.find(g => g.id === e.target.value);
@@ -633,24 +673,38 @@ export const PcDiagnosisView: React.FC = () => {
                     </button>
                   ))}
                   {availableMbBrands.length > 5 && (
-                    <select
-                      value={mbFilterBrand}
-                      onChange={(e) => setMbFilterBrand(e.target.value)}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
-                    >
-                      <option value="All">Otras Marcas ({availableMbBrands.length})...</option>
-                      {availableMbBrands.filter(b => b !== 'All').map(b => (
-                        <option key={b} value={b}>{b}</option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <label htmlFor="diag-mb-filter-brand" className="sr-only">
+                        Otras marcas de placa base
+                      </label>
+                      <select
+                        id="diag-mb-filter-brand"
+                        name="mbFilterBrand"
+                        aria-label="Otras marcas de placa base"
+                        value={mbFilterBrand}
+                        onChange={(e) => setMbFilterBrand(e.target.value)}
+                        className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
+                      >
+                        <option value="All">Otras Marcas ({availableMbBrands.length})...</option>
+                        {availableMbBrands.filter(b => b !== 'All').map(b => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
                   )}
                 </div>
               </div>
 
               {/* Buscador de Placas Base */}
               <div className="relative mb-2">
+                <label htmlFor="diag-mb-search-input" className="sr-only">
+                  Buscar placa base
+                </label>
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
                 <input
+                  id="diag-mb-search-input"
+                  name="mbSearch"
+                  aria-label="Buscar placa base por modelo, socket o chipset"
                   type="text"
                   value={mbSearch}
                   onChange={(e) => setMbSearch(e.target.value)}
@@ -662,6 +716,7 @@ export const PcDiagnosisView: React.FC = () => {
                     type="button"
                     onClick={() => setMbSearch('')}
                     className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
+                    aria-label="Limpiar búsqueda de placa base"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -691,8 +746,13 @@ export const PcDiagnosisView: React.FC = () => {
                 </div>
               )}
 
+              <label htmlFor="diag-select-motherboard" className="sr-only">
+                Seleccionar placa base
+              </label>
               <select
                 id="diag-select-motherboard"
+                name="selectedMotherboard"
+                aria-label="Seleccionar placa base"
                 value={currentConfig.motherboard?.id || ''}
                 onChange={(e) => {
                   const found = motherboards.find(m => m.id === e.target.value);
@@ -706,7 +766,7 @@ export const PcDiagnosisView: React.FC = () => {
                   <optgroup label={`─── COMPATIBLES CON SOCKET ${currentConfig.cpu.socket.toUpperCase()} ───`}>
                     {filteredMotherboards
                       .filter(m => m.socket?.toLowerCase() === currentConfig.cpu.socket?.toLowerCase())
-                      .slice(0, 50)
+                      .slice(0, 250)
                       .map(m => (
                         <option key={m.id} value={m.id}>
                           {m.brand} {m.name} • {m.chipset} ({m.formFactor} • {m.memoryType})
@@ -717,7 +777,7 @@ export const PcDiagnosisView: React.FC = () => {
                 <optgroup label={`─── OTRAS PLACAS BASE (${mbFilterBrand === 'All' ? 'BUILDCORES OPEN DB' : mbFilterBrand.toUpperCase()}) ───`}>
                   {filteredMotherboards
                     .filter(m => !currentConfig.cpu.socket || m.socket?.toLowerCase() !== currentConfig.cpu.socket?.toLowerCase())
-                    .slice(0, 40)
+                    .slice(0, 250)
                     .map(m => (
                       <option key={m.id} value={m.id}>
                         {m.brand} {m.name} • Socket {m.socket} ({m.formFactor})
@@ -748,24 +808,38 @@ export const PcDiagnosisView: React.FC = () => {
                     </button>
                   ))}
                   {availableRamBrands.length > 5 && (
-                    <select
-                      value={ramFilterBrand}
-                      onChange={(e) => setRamFilterBrand(e.target.value)}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
-                    >
-                      <option value="All">Más Marcas ({availableRamBrands.length})...</option>
-                      {availableRamBrands.filter(b => b !== 'All').map(b => (
-                        <option key={b} value={b}>{b}</option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <label htmlFor="diag-ram-filter-brand" className="sr-only">
+                        Más marcas de memoria RAM
+                      </label>
+                      <select
+                        id="diag-ram-filter-brand"
+                        name="ramFilterBrand"
+                        aria-label="Más marcas de memoria RAM"
+                        value={ramFilterBrand}
+                        onChange={(e) => setRamFilterBrand(e.target.value)}
+                        className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
+                      >
+                        <option value="All">Más Marcas ({availableRamBrands.length})...</option>
+                        {availableRamBrands.filter(b => b !== 'All').map(b => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
                   )}
                 </div>
               </div>
 
               {/* Buscador de Memoria RAM */}
               <div className="relative mb-2">
+                <label htmlFor="diag-ram-search-input" className="sr-only">
+                  Buscar memoria RAM
+                </label>
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
                 <input
+                  id="diag-ram-search-input"
+                  name="ramSearch"
+                  aria-label="Buscar memoria RAM por capacidad, velocidad o modelo"
                   type="text"
                   value={ramSearch}
                   onChange={(e) => setRamSearch(e.target.value)}
@@ -777,14 +851,20 @@ export const PcDiagnosisView: React.FC = () => {
                     type="button"
                     onClick={() => setRamSearch('')}
                     className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
+                    aria-label="Limpiar búsqueda de RAM"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
 
+              <label htmlFor="diag-select-ram" className="sr-only">
+                Seleccionar memoria RAM
+              </label>
               <select
                 id="diag-select-ram"
+                name="selectedRam"
+                aria-label="Seleccionar memoria RAM"
                 value={currentConfig.ram.id}
                 onChange={(e) => {
                   const found = rams.find(r => r.id === e.target.value);
@@ -792,7 +872,7 @@ export const PcDiagnosisView: React.FC = () => {
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
-                {filteredRams.slice(0, 80).map(r => (
+                {filteredRams.slice(0, 300).map(r => (
                   <option key={r.id} value={r.id}>
                     {r.brand ? `${r.brand} ` : ''}{r.name || `${r.capacityGb}GB ${r.type}`} • {r.speedMhz}MHz (CL{r.casLatency})
                   </option>
@@ -821,24 +901,38 @@ export const PcDiagnosisView: React.FC = () => {
                     </button>
                   ))}
                   {availableStorageBrands.length > 6 && (
-                    <select
-                      value={storageFilterBrand}
-                      onChange={(e) => setStorageFilterBrand(e.target.value)}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
-                    >
-                      <option value="All">Más Marcas ({availableStorageBrands.length})...</option>
-                      {availableStorageBrands.filter(b => b !== 'All').map(b => (
-                        <option key={b} value={b}>{b}</option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <label htmlFor="diag-storage-filter-brand" className="sr-only">
+                        Más marcas de almacenamiento SSD
+                      </label>
+                      <select
+                        id="diag-storage-filter-brand"
+                        name="storageFilterBrand"
+                        aria-label="Más marcas de almacenamiento SSD"
+                        value={storageFilterBrand}
+                        onChange={(e) => setStorageFilterBrand(e.target.value)}
+                        className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
+                      >
+                        <option value="All">Más Marcas ({availableStorageBrands.length})...</option>
+                        {availableStorageBrands.filter(b => b !== 'All').map(b => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
                   )}
                 </div>
               </div>
 
               {/* Buscador de Almacenamiento */}
               <div className="relative mb-2">
+                <label htmlFor="diag-storage-search-input" className="sr-only">
+                  Buscar almacenamiento SSD
+                </label>
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
                 <input
+                  id="diag-storage-search-input"
+                  name="storageSearch"
+                  aria-label="Buscar almacenamiento SSD o disco"
                   type="text"
                   value={storageSearch}
                   onChange={(e) => setStorageSearch(e.target.value)}
@@ -850,14 +944,20 @@ export const PcDiagnosisView: React.FC = () => {
                     type="button"
                     onClick={() => setStorageSearch('')}
                     className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
+                    aria-label="Limpiar búsqueda de almacenamiento"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
 
+              <label htmlFor="diag-select-storage" className="sr-only">
+                Seleccionar unidad de almacenamiento
+              </label>
               <select
                 id="diag-select-storage"
+                name="selectedStorage"
+                aria-label="Seleccionar unidad de almacenamiento"
                 value={currentConfig.storage.id}
                 onChange={(e) => {
                   const found = storages.find(s => s.id === e.target.value);
@@ -865,7 +965,7 @@ export const PcDiagnosisView: React.FC = () => {
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
-                {filteredStorages.slice(0, 80).map(s => (
+                {filteredStorages.slice(0, 300).map(s => (
                   <option key={s.id} value={s.id}>
                     {s.brand ? `${s.brand} ` : ''}{s.type} {s.capacityGb >= 1000 ? `${s.capacityGb / 1000}TB` : `${s.capacityGb}GB`} • ~{s.readSpeedMb} MB/s
                   </option>
@@ -895,24 +995,38 @@ export const PcDiagnosisView: React.FC = () => {
                     </button>
                   ))}
                   {availablePsuBrands.length > 6 && (
-                    <select
-                      value={psuFilterBrand}
-                      onChange={(e) => setPsuFilterBrand(e.target.value)}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
-                    >
-                      <option value="All">Más Marcas ({availablePsuBrands.length})...</option>
-                      {availablePsuBrands.filter(b => b !== 'All').map(b => (
-                        <option key={b} value={b}>{b}</option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <label htmlFor="diag-psu-filter-brand" className="sr-only">
+                        Más marcas de fuente de poder
+                      </label>
+                      <select
+                        id="diag-psu-filter-brand"
+                        name="psuFilterBrand"
+                        aria-label="Más marcas de fuente de poder"
+                        value={psuFilterBrand}
+                        onChange={(e) => setPsuFilterBrand(e.target.value)}
+                        className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
+                      >
+                        <option value="All">Más Marcas ({availablePsuBrands.length})...</option>
+                        {availablePsuBrands.filter(b => b !== 'All').map(b => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
                   )}
                 </div>
               </div>
 
               {/* Buscador de Fuentes de Poder */}
               <div className="relative mb-2">
+                <label htmlFor="diag-psu-search-input" className="sr-only">
+                  Buscar fuente de poder
+                </label>
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
                 <input
+                  id="diag-psu-search-input"
+                  name="psuSearch"
+                  aria-label="Buscar fuente de poder por modelo o wattage"
                   type="text"
                   value={psuSearch}
                   onChange={(e) => setPsuSearch(e.target.value)}
@@ -924,6 +1038,7 @@ export const PcDiagnosisView: React.FC = () => {
                     type="button"
                     onClick={() => setPsuSearch('')}
                     className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
+                    aria-label="Limpiar búsqueda de fuente de poder"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -963,8 +1078,13 @@ export const PcDiagnosisView: React.FC = () => {
                   </span>
                 </div>
               )}
+              <label htmlFor="diag-select-psu" className="sr-only">
+                Seleccionar fuente de poder
+              </label>
               <select
                 id="diag-select-psu"
+                name="selectedPsu"
+                aria-label="Seleccionar fuente de poder"
                 value={currentConfig.psu?.id || ''}
                 onChange={(e) => {
                   const found = psus.find(p => p.id === e.target.value);
@@ -983,7 +1103,7 @@ export const PcDiagnosisView: React.FC = () => {
                   </optgroup>
                 )}
                 <optgroup label={`─── FUENTES DE PODER (${psuFilterBrand === 'All' ? 'TODAS LAS MARCAS' : psuFilterBrand.toUpperCase()}) ───`}>
-                  {filteredPsus.filter(p => p.brand !== 'Laptop Original').slice(0, 80).map(p => (
+                  {filteredPsus.filter(p => p.brand !== 'Laptop Original').slice(0, 300).map(p => (
                     <option key={p.id} value={p.id}>
                       {p.name} {p.brand && !p.name.includes(p.brand) ? `(${p.brand})` : ''} • {p.wattage}W ({p.efficiency})
                     </option>
@@ -1728,6 +1848,82 @@ export const PcDiagnosisView: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Expert Technical Observations & Commentary */}
+          <div className="bg-[#151921] border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-cyan-400" /> COMENTARIOS & OBSERVACIONES TÉCNICAS DEL DIAGNÓSTICO
+              </h4>
+              <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/60">
+                Auditoría Calibrada 2026
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              {/* Comment 1: CPU + GPU Architecture */}
+              <div className="p-3.5 bg-[#1C222D]/80 rounded-xl border border-slate-700/60 space-y-1.5">
+                <div className="flex items-center gap-2 text-[11px] font-bold text-cyan-300 uppercase">
+                  <Cpu className="w-3.5 h-3.5 text-cyan-400" /> Sinergia CPU + GPU
+                </div>
+                <p className="text-slate-300 leading-relaxed">
+                  {currentResult.bottleneckPct < 12
+                    ? `Excelente simetría entre el ${currentConfig.cpu.name} y la ${currentConfig.gpu.name}. Ambos componentes extraen más del 90% de su rendimiento nominal en ${currentConfig.resolution.toUpperCase()} sin generar retrasos en el pipeline gráfico.`
+                    : currentResult.limitingFactor === 'CPU'
+                    ? `El ${currentConfig.cpu.name} limita en un ${currentResult.bottleneckPct}% el potencial de la ${currentConfig.gpu.name}. En juegos competitivos a altos FPS se aconseja subir resolución a 1440p/4K o elevar ajustes de renderizado para trasladar carga a la tarjeta gráfica.`
+                    : `La ${currentConfig.gpu.name} opera al 100% de carga mientras el procesador mantiene margen libre. Este es el estado ideal para juegos de alta fidelidad visual (Ray Tracing y gráficos Ultra).`}
+                </p>
+              </div>
+
+              {/* Comment 2: Memory Bandwidth */}
+              <div className="p-3.5 bg-[#1C222D]/80 rounded-xl border border-slate-700/60 space-y-1.5">
+                <div className="flex items-center gap-2 text-[11px] font-bold text-indigo-300 uppercase">
+                  <Layers className="w-3.5 h-3.5 text-indigo-400" /> Balance de Memoria RAM
+                </div>
+                <p className="text-slate-300 leading-relaxed">
+                  {currentConfig.ram.channels === 'single'
+                    ? `⚠️ Memoria en Single-Channel: Tu configuración sufre una penalización del ${currentResult.technicalDetails.ramSpeedPenaltyPct}% en latencias de acceso. Instalar un segundo módulo de memoria es la mejora más barata y efectiva para estabilizar los 1% Lows.`
+                    : `Configuración en Dual-Channel activa (${currentConfig.ram.capacityGb}GB a ${currentConfig.ram.speedMhz}MHz). Ancho de banda óptimo para alimentar la caché de la CPU sin generar micro-parones en streaming de texturas.`}
+                </p>
+              </div>
+
+              {/* Comment 3: Power & Thermals */}
+              <div className="p-3.5 bg-[#1C222D]/80 rounded-xl border border-slate-700/60 space-y-1.5">
+                <div className="flex items-center gap-2 text-[11px] font-bold text-amber-300 uppercase">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Energía & Transitorios
+                </div>
+                <p className="text-slate-300 leading-relaxed">
+                  Consumo estimado del sistema en ~{currentResult.powerStats.systemEstimatedWatts}W continuos con picos transitorios de hasta {currentResult.powerStats.peakSurgeWatts}W.
+                  {currentResult.powerStats.userPsuEvaluation
+                    ? ` Tu fuente elegida de ${currentResult.powerStats.userPsuEvaluation.wattage}W opera al ${currentResult.powerStats.userPsuEvaluation.loadPercentage}% de carga con ${currentResult.powerStats.userPsuEvaluation.headroomWatts >= 0 ? `+${currentResult.powerStats.userPsuEvaluation.headroomWatts}W de reserva` : 'déficit'}.`
+                    : ` Se recomienda fuente de ${currentResult.powerStats.recommendedPsuWatts}W con certificación 80+ Gold.`}
+                </p>
+              </div>
+
+              {/* Comment 4: Display & Video output */}
+              <div className="p-3.5 bg-[#1C222D]/80 rounded-xl border border-slate-700/60 space-y-1.5">
+                <div className="flex items-center gap-2 text-[11px] font-bold text-emerald-300 uppercase">
+                  <Monitor className="w-3.5 h-3.5 text-emerald-400" /> Salida de Pantalla & VRAM
+                </div>
+                <p className="text-slate-300 leading-relaxed">
+                  {currentResult.displayAnalysis?.vramAlert
+                    ? currentResult.displayAnalysis.vramAlert
+                    : `La demanda de memoria gráfica está bajo control (~${currentResult.displayAnalysis?.vramEstimatedUsageGb || 8}GB de ${currentConfig.gpu.vram}GB). Cable recomendado para evitar flickering: ${currentResult.displayAnalysis?.cableRecommendation || 'DisplayPort 1.4a o HDMI 2.1'}.`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Community Reviews & Builder Feedback for this specific CPU + GPU build */}
+          <div className="pt-2">
+            <CommunityCommentsSection
+              targetId={`${currentConfig.cpu.name} + ${currentConfig.gpu.name}`}
+              targetName={`${currentConfig.cpu.name} + ${currentConfig.gpu.name}`}
+              category="pc"
+              title="OPINIONES & COMENTARIOS DE LA COMUNIDAD"
+              subtitle="Experiencias reales de ensambladores con esta combinación de procesador y gráfica."
+            />
+          </div>
 
         </div>
       </div>

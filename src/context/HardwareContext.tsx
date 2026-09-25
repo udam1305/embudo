@@ -91,7 +91,7 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const reloadComponents = async () => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       const res = await fetch('/api/components/all', { signal: controller.signal });
       clearTimeout(timeoutId);
       if (res.ok) {
@@ -105,8 +105,25 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (data.socs && data.socs.length > 0) setSocs(data.socs);
         if (data.metadata) setBuildcoresMetadata(data.metadata);
       }
-    } catch {
-      // Local seed hardware is already active and optimal
+    } catch (err: any) {
+      console.warn('[HardwareContext] Aviso al cargar componentes completos, reintentando:', err?.message);
+      // Retry once without abort controller in case of transient latency
+      try {
+        const retryRes = await fetch('/api/components/all');
+        if (retryRes.ok) {
+          const data = await retryRes.json();
+          if (data.cpus && data.cpus.length > 0) setCpus(data.cpus);
+          if (data.gpus && data.gpus.length > 0) setGpus(data.gpus);
+          if (data.motherboards && data.motherboards.length > 0) setMotherboards(data.motherboards);
+          if (data.psus && data.psus.length > 0) setPsus(data.psus);
+          if (data.rams && data.rams.length > 0) setRams(data.rams);
+          if (data.storages && data.storages.length > 0) setStorages(data.storages);
+          if (data.socs && data.socs.length > 0) setSocs(data.socs);
+          if (data.metadata) setBuildcoresMetadata(data.metadata);
+        }
+      } catch (retryErr) {
+        console.warn('[HardwareContext] Catálogo local inicial activo como fallback:', retryErr);
+      }
     }
   };
 

@@ -389,9 +389,14 @@ export const SmartphonesView: React.FC = () => {
 
             {/* Central High-Contrast Search Input */}
             <div className="relative max-w-3xl mx-auto">
+              <label htmlFor="phone-specs-search-input" className="sr-only">
+                Buscar teléfonos por modelo o marca
+              </label>
               <Search className="w-5 h-5 text-cyan-400 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
                 id="phone-specs-search-input"
+                name="phoneSearch"
+                aria-label="Buscar teléfono por modelo o marca"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -402,9 +407,11 @@ export const SmartphonesView: React.FC = () => {
                 {searching && <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />}
                 {searchQuery && (
                   <button
+                    type="button"
                     onClick={handleClearSearch}
                     className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
                     title="Limpiar búsqueda"
+                    aria-label="Limpiar búsqueda"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -439,8 +446,13 @@ export const SmartphonesView: React.FC = () => {
 
                   {/* Dropdown for 100+ brands */}
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500 text-[11px]">Todas las marcas:</span>
+                    <label htmlFor="select-all-phone-brands" className="text-slate-500 text-[11px] cursor-pointer">
+                      Todas las marcas:
+                    </label>
                     <select
+                      id="select-all-phone-brands"
+                      name="selectedBrand"
+                      aria-label="Seleccionar marca de smartphone"
                       value={selectedBrandSlug}
                       onChange={(e) => {
                         const slug = e.target.value;
@@ -685,8 +697,13 @@ export const SmartphonesView: React.FC = () => {
                     ))}
                   </div>
                 </div>
+                <label htmlFor="mobile-select-soc" className="sr-only">
+                  Seleccionar procesador móvil
+                </label>
                 <select
                   id="mobile-select-soc"
+                  name="selectedMobileSoc"
+                  aria-label="Seleccionar procesador móvil"
                   value={selectedSocId}
                   onChange={(e) => setSelectedSocId(e.target.value)}
                   className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
@@ -920,7 +937,13 @@ export const SmartphonesView: React.FC = () => {
                       </button>
                     ))}
                   </div>
+                  <label htmlFor="select-compare-soc-secondary" className="sr-only">
+                    Comparar con procesador secundario
+                  </label>
                   <select
+                    id="select-compare-soc-secondary"
+                    name="compareSocSecondary"
+                    aria-label="Comparar con procesador secundario"
                     value={compareSocId}
                     onChange={(e) => setCompareSocId(e.target.value)}
                     className="px-3 py-2 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-bold text-cyan-300 cursor-pointer"

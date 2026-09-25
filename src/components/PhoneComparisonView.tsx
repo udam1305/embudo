@@ -137,12 +137,15 @@ export const PhoneComparisonView: React.FC<PhoneComparisonViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Phone A Selector */}
           <div className="relative">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 block mb-1.5">
+            <label htmlFor="compare-phone-a-input" className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 block mb-1.5 cursor-pointer">
               Dispositivo A: {phoneA?.model || 'Seleccionar...'}
             </label>
             <div className="relative">
               <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
+                id="compare-phone-a-input"
+                name="comparePhoneA"
+                aria-label="Buscar teléfono A para comparar"
                 type="text"
                 placeholder="Buscar teléfono A (ej: Galaxy S24, iPhone 16...)"
                 value={searchQueryA}
@@ -151,11 +154,13 @@ export const PhoneComparisonView: React.FC<PhoneComparisonViewProps> = ({
               />
               {searchQueryA && (
                 <button
+                  type="button"
                   onClick={() => {
                     setSearchQueryA('');
                     setResultsA([]);
                   }}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  aria-label="Limpiar selección A"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -191,12 +196,15 @@ export const PhoneComparisonView: React.FC<PhoneComparisonViewProps> = ({
 
           {/* Phone B Selector */}
           <div className="relative">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-blue-400 block mb-1.5">
+            <label htmlFor="compare-phone-b-input" className="text-[10px] font-bold uppercase tracking-wider text-blue-400 block mb-1.5 cursor-pointer">
               Dispositivo B: {phoneB?.model || 'Seleccionar...'}
             </label>
             <div className="relative">
               <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
+                id="compare-phone-b-input"
+                name="comparePhoneB"
+                aria-label="Buscar teléfono B para comparar"
                 type="text"
                 placeholder="Buscar teléfono B (ej: Pixel 9, Xiaomi 14...)"
                 value={searchQueryB}
@@ -205,11 +213,13 @@ export const PhoneComparisonView: React.FC<PhoneComparisonViewProps> = ({
               />
               {searchQueryB && (
                 <button
+                  type="button"
                   onClick={() => {
                     setSearchQueryB('');
                     setResultsB([]);
                   }}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  aria-label="Limpiar selección B"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

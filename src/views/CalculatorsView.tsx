@@ -145,10 +145,13 @@ export const CalculatorsView: React.FC = () => {
             {/* Fan Count & RGB */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block">
+                <label htmlFor="calc-fan-count-range" className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block cursor-pointer">
                   VENTILADORES DE GABINETE: {fanCount}
                 </label>
                 <input
+                  id="calc-fan-count-range"
+                  name="fanCount"
+                  aria-label="Cantidad de ventiladores de gabinete"
                   type="range"
                   min={1}
                   max={12}
@@ -160,8 +163,11 @@ export const CalculatorsView: React.FC = () => {
               </div>
 
               <div className="flex flex-col justify-center">
-                <label className="flex items-center gap-3 p-3.5 bg-[#1C222D] rounded-xl border border-slate-700 cursor-pointer">
+                <label htmlFor="calc-overclock-checkbox" className="flex items-center gap-3 p-3.5 bg-[#1C222D] rounded-xl border border-slate-700 cursor-pointer">
                   <input
+                    id="calc-overclock-checkbox"
+                    name="overclockEnabled"
+                    aria-label="Overclock activo para CPU y GPU"
                     type="checkbox"
                     checked={overclockEnabled}
                     onChange={(e) => setOverclockEnabled(e.target.checked)}
@@ -263,10 +269,13 @@ export const CalculatorsView: React.FC = () => {
             </h3>
 
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block">
+              <label htmlFor="calc-custom-watts" className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block cursor-pointer">
                 CONSUMO PROMEDIO EN USO: {customWatts}W
               </label>
               <input
+                id="calc-custom-watts"
+                name="customWatts"
+                aria-label="Consumo promedio en watts"
                 type="range"
                 min={100}
                 max={1200}
@@ -283,10 +292,13 @@ export const CalculatorsView: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block">
+              <label htmlFor="calc-hours-per-day" className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block cursor-pointer">
                 HORAS DE USO DIARIAS: {hoursPerDay} HRS/DÍA
               </label>
               <input
+                id="calc-hours-per-day"
+                name="hoursPerDay"
+                aria-label="Horas de uso diarias"
                 type="range"
                 min={1}
                 max={24}
@@ -298,10 +310,13 @@ export const CalculatorsView: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block">
+                <label htmlFor="calc-cost-per-kwh" className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block cursor-pointer">
                   PRECIO POR KWH ({currencySymbol})
                 </label>
                 <input
+                  id="calc-cost-per-kwh"
+                  name="costPerKwh"
+                  aria-label="Precio por kilowatt-hora"
                   type="number"
                   step={0.01}
                   value={costPerKwh}
@@ -311,10 +326,13 @@ export const CalculatorsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block">
+                <label htmlFor="calc-currency-symbol" className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block cursor-pointer">
                   MONEDA
                 </label>
                 <select
+                  id="calc-currency-symbol"
+                  name="currencySymbol"
+                  aria-label="Moneda de facturación eléctrica"
                   value={currencySymbol}
                   onChange={(e) => setCurrencySymbol(e.target.value)}
                   className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-emerald-500 cursor-pointer transition-all"

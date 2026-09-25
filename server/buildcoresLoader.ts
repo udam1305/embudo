@@ -133,29 +133,14 @@ export function getBuildCoresStatus() {
   };
 }
 
-export function getAllComponents(full = false) {
-  if (full) {
-    return {
-      cpus: buildCoresCpus,
-      gpus: buildCoresGpus,
-      motherboards: buildCoresMotherboards,
-      psus: buildCoresPsus,
-      rams: buildCoresRams,
-      storages: buildCoresStorages,
-      socs: INITIAL_SOCS,
-      metadata: cachedMetadata
-    };
-  }
-
-  // Fast, balanced payload for lightning-fast client loading (< 200KB vs 5MB)
-  // Guarantees all seed items + top modern BuildCores hardware without browser freezing
+export function getAllComponents() {
   return {
-    cpus: buildCoresCpus.slice(0, 150),
-    gpus: buildCoresGpus.slice(0, 150),
-    motherboards: buildCoresMotherboards.slice(0, 80),
-    psus: buildCoresPsus.slice(0, 80),
-    rams: buildCoresRams.slice(0, 80),
-    storages: buildCoresStorages.slice(0, 80),
+    cpus: buildCoresCpus,
+    gpus: buildCoresGpus,
+    motherboards: buildCoresMotherboards,
+    psus: buildCoresPsus,
+    rams: buildCoresRams,
+    storages: buildCoresStorages,
     socs: INITIAL_SOCS,
     metadata: cachedMetadata
   };

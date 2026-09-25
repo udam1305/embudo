@@ -147,7 +147,13 @@ export const PcComparatorView: React.FC = () => {
                   ))}
                 </div>
               </div>
+              <label htmlFor="comp-select-cpu-a" className="sr-only">
+                Seleccionar Procesador A
+              </label>
               <select
+                id="comp-select-cpu-a"
+                name="setupCpuA"
+                aria-label="Seleccionar Procesador A"
                 value={setupA.cpu.id}
                 onChange={(e) => {
                   const found = cpus.find(c => c.id === e.target.value);
@@ -170,7 +176,9 @@ export const PcComparatorView: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
                 <div className="flex items-center gap-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GRÁFICA A</label>
+                  <label htmlFor="comp-select-gpu-a" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider cursor-pointer">
+                    GRÁFICA A
+                  </label>
                   <span className="text-[10px] font-bold text-cyan-400 font-mono">{gpuMetaA.shortLabel}</span>
                 </div>
                 <div className="flex items-center gap-1 text-[10px]">
@@ -189,6 +197,9 @@ export const PcComparatorView: React.FC = () => {
                 </div>
               </div>
               <select
+                id="comp-select-gpu-a"
+                name="setupGpuA"
+                aria-label="Seleccionar Tarjeta Gráfica A"
                 value={setupA.gpu.id}
                 onChange={(e) => {
                   const found = gpus.find(g => g.id === e.target.value);
@@ -278,7 +289,13 @@ export const PcComparatorView: React.FC = () => {
                   ))}
                 </div>
               </div>
+              <label htmlFor="comp-select-cpu-b" className="sr-only">
+                Seleccionar Procesador B
+              </label>
               <select
+                id="comp-select-cpu-b"
+                name="setupCpuB"
+                aria-label="Seleccionar Procesador B"
                 value={setupB.cpu.id}
                 onChange={(e) => {
                   const found = cpus.find(c => c.id === e.target.value);
@@ -301,7 +318,9 @@ export const PcComparatorView: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
                 <div className="flex items-center gap-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GRÁFICA B</label>
+                  <label htmlFor="comp-select-gpu-b" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider cursor-pointer">
+                    GRÁFICA B
+                  </label>
                   <span className="text-[10px] font-bold text-blue-400 font-mono">{gpuMetaB.shortLabel}</span>
                 </div>
                 <div className="flex items-center gap-1 text-[10px]">
@@ -320,6 +339,9 @@ export const PcComparatorView: React.FC = () => {
                 </div>
               </div>
               <select
+                id="comp-select-gpu-b"
+                name="setupGpuB"
+                aria-label="Seleccionar Tarjeta Gráfica B"
                 value={setupB.gpu.id}
                 onChange={(e) => {
                   const found = gpus.find(g => g.id === e.target.value);
