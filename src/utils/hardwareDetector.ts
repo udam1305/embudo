@@ -276,15 +276,58 @@ export async function scanClientDevice(
   const logicalThreads = navigator.hardwareConcurrency || 8;
   let memoryEstimateGb = (navigator as any).deviceMemory;
 
-  // 5. Operating System Detection
+  // 5. Operating System & Mobile Device Fingerprinting
   const ua = navigator.userAgent;
+
+  // Direct UA & platform flags
+  const isIPhoneUa = /iPhone/i.test(ua) || (typeof navigator !== 'undefined' && (navigator.platform === 'iPhone' || navigator.platform === 'iPhone Simulator'));
+  const isIPodUa = /iPod/i.test(ua);
+  const isIPadUa = /iPad/i.test(ua) || (
+    typeof navigator !== 'undefined' &&
+    navigator.platform === 'MacIntel' &&
+    navigator.maxTouchPoints > 1 &&
+    Math.max(window.screen.width, window.screen.height) <= 1366 &&
+    Math.min(window.screen.width, window.screen.height) >= 600
+  );
+  const isAndroidUa = /Android/i.test(ua);
+
+  // Screen metrics in CSS logical points
+  const screenLogicalMin = Math.min(window.screen.width, window.screen.height);
+  const screenLogicalMax = Math.max(window.screen.width, window.screen.height);
+
+  // Phone check by touch and screen dimensions:
+  // Catches all iPhone models even if Safari / Chrome "Request Desktop Website" is enabled
+  // (In desktop mode, Apple sends "Macintosh; Intel Mac OS X 10_15_7" & "MacIntel", but maxTouchPoints is 5 and screenLogicalMin <= 500)
+  const isTouchPhoneByDimensions = Boolean(
+    typeof navigator !== 'undefined' &&
+    navigator.maxTouchPoints > 1 &&
+    screenLogicalMin <= 500
+  );
+
+  const isIPhoneDevice = Boolean(
+    isIPhoneUa ||
+    isIPodUa ||
+    (isTouchPhoneByDimensions && (
+      rawGpuRenderer.toLowerCase().includes('apple') ||
+      /Mac/i.test(navigator.platform || '') ||
+      /Mac OS X/i.test(ua)
+    ))
+  );
+
+  const isSmartphoneDevice = Boolean(
+    isIPhoneDevice ||
+    (isAndroidUa && !/Tablet/i.test(ua)) ||
+    (/Mobile/i.test(ua) && !isIPadUa) ||
+    isTouchPhoneByDimensions
+  );
+
   let os: DeviceScanResult['os'] = 'Windows 11';
-  if (/Macintosh|Mac OS X/i.test(ua) || navigator.platform?.toUpperCase().indexOf('MAC') >= 0) {
-    os = 'macOS';
-  } else if (/Android/i.test(ua)) {
-    os = 'Android';
-  } else if (/iPhone|iPad|iPod/i.test(ua)) {
+  if (isIPhoneDevice || isIPadUa) {
     os = 'iOS';
+  } else if (isAndroidUa || (isSmartphoneDevice && !isIPhoneDevice)) {
+    os = 'Android';
+  } else if (/Macintosh/i.test(ua) && !isSmartphoneDevice && (typeof navigator === 'undefined' || navigator.maxTouchPoints <= 1)) {
+    os = 'macOS';
   } else if (/Linux/i.test(ua)) {
     os = 'Linux';
   } else if (/Windows NT 10.0/i.test(ua)) {
@@ -293,7 +336,7 @@ export async function scanClientDevice(
     os = 'Windows 10';
   }
 
-  detectionDetails.push(`Sistema Operativo: ${os}`);
+  detectionDetails.push(`Sistema Operativo: ${os} ${isIPhoneDevice ? '(Apple iOS Mobile)' : ''}`);
   detectionDetails.push(`Hilos de CPU detectados: ${logicalThreads} núcleos`);
 
   // 6. Battery probe
@@ -314,7 +357,7 @@ export async function scanClientDevice(
     }
   } catch {}
 
-  // 7. Screen & Display Diagnostics (including MacBook Screen Fingerprint)
+  // 7. Screen & Display Diagnostics (including iPhone & MacBook Screen Fingerprints)
   const pixelRatio = window.devicePixelRatio || 1;
   const screenWidth = Math.round(window.screen.width * pixelRatio);
   const screenHeight = Math.round(window.screen.height * pixelRatio);
@@ -326,10 +369,43 @@ export async function scanClientDevice(
 
   let detectedResolution: ResolutionType = '1080p';
   let resolutionLabel = '1080p Full HD';
-  let macModelName: string | undefined = macHardwareModelFromDevices;
+  let macModelName: string | undefined = undefined;
+  let detectedIphoneModel: string | undefined = undefined;
 
-  // Specific MacBook Display Geometry Identification:
-  if (os === 'macOS') {
+  // Specific iPhone Identification by Screen Geometry & Refresh Rate:
+  if (isIPhoneDevice || (os === 'iOS' && !isIPadUa)) {
+    const ptW = screenLogicalMin;
+    const ptH = screenLogicalMax;
+
+    if (ptW === 440 && ptH === 956) {
+      detectedIphoneModel = 'Apple iPhone 16 Pro Max';
+    } else if (ptW === 402 && ptH === 874) {
+      detectedIphoneModel = 'Apple iPhone 16 Pro';
+    } else if (ptW === 430 && ptH === 932) {
+      detectedIphoneModel = displayHz >= 110 ? 'Apple iPhone 15 Pro Max' : 'Apple iPhone 16 Plus';
+    } else if (ptW === 393 && ptH === 852) {
+      detectedIphoneModel = displayHz >= 110 ? 'Apple iPhone 16 Pro / 15 Pro' : 'Apple iPhone 16 / iPhone 15';
+    } else if (ptW === 390 && ptH === 844) {
+      detectedIphoneModel = displayHz >= 110 ? 'Apple iPhone 14 Pro / 13 Pro' : 'Apple iPhone 14 / iPhone 13';
+    } else if (ptW === 428 && ptH === 926) {
+      detectedIphoneModel = displayHz >= 110 ? 'Apple iPhone 13 Pro Max' : 'Apple iPhone 14 Plus / 12 Pro Max';
+    } else if (ptW === 414 && ptH === 896) {
+      detectedIphoneModel = pixelRatio === 3 ? 'Apple iPhone 11 Pro Max / XS Max' : 'Apple iPhone 11 / XR';
+    } else if (ptW === 375 && ptH === 812) {
+      detectedIphoneModel = 'Apple iPhone 11 Pro / iPhone X / XS / 13 mini';
+    } else if (ptW === 375 && ptH === 667) {
+      detectedIphoneModel = 'Apple iPhone SE (3ª Gen)';
+    } else {
+      detectedIphoneModel = 'Apple iPhone (Super Retina OLED)';
+    }
+
+    detectedResolution = '1440p';
+    resolutionLabel = `${detectedIphoneModel} (${screenWidth}x${screenHeight} • ${pixelRatio}x DPR • ${displayHz}Hz)`;
+  } else if (isIPadUa) {
+    detectedResolution = '1440p';
+    resolutionLabel = `Liquid Retina iPad (${screenWidth}x${screenHeight} • ${displayHz}Hz)`;
+  } else if (os === 'macOS' && !isSmartphoneDevice) {
+    macModelName = macHardwareModelFromDevices;
     if ((screenWidth === 3024 && screenHeight === 1964) || (screenWidth === 1964 && screenHeight === 3024) || (window.screen.width === 1512 && pixelRatio === 2)) {
       macModelName = 'MacBook Pro 14" (Liquid Retina XDR)';
       detectedResolution = '1440p';
@@ -383,16 +459,15 @@ export async function scanClientDevice(
   detectionDetails.push(`Pantalla: ${screenWidth}x${screenHeight} @ ${displayHz}Hz (${resolutionLabel})`);
 
   // 8. Device Type Determination
-  const isMobileUa = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-  const isTouchScreen = navigator.maxTouchPoints > 1 && window.screen.width <= 1024;
-  const isMacBook = os === 'macOS' && (macModelName?.includes('MacBook') || hasBattery || pixelRatio === 2);
+  const isMacBook = os === 'macOS' && !isSmartphoneDevice && (macModelName?.includes('MacBook') || hasBattery || pixelRatio === 2);
 
   let deviceType: DeviceScanResult['deviceType'] = 'desktop';
   let deviceTypeName = 'PC de Escritorio / Sobremesa';
 
-  if (isMobileUa || os === 'Android' || os === 'iOS' || (isTouchScreen && window.screen.width <= 768)) {
+  if (isSmartphoneDevice || isIPhoneDevice || os === 'iOS' || os === 'Android') {
     deviceType = 'smartphone';
-    deviceTypeName = 'Smartphone / Teléfono Móvil';
+    deviceTypeName = detectedIphoneModel || (os === 'iOS' ? 'Apple iPhone' : 'Smartphone / Teléfono Móvil');
+    macModelName = undefined; // CRITICAL: Never assign "Mac Desktop" or "MacBook" to a smartphone!
   } else if (isMacBook) {
     deviceType = 'laptop';
     deviceTypeName = macModelName || 'MacBook Portátil';
@@ -401,7 +476,7 @@ export async function scanClientDevice(
     deviceTypeName = 'Notebook / Computadora Portátil';
   } else {
     deviceType = 'desktop';
-    deviceTypeName = 'PC de Escritorio / Sobremesa';
+    deviceTypeName = macModelName || 'PC de Escritorio / Sobremesa';
   }
 
   detectionDetails.push(`Tipo de Dispositivo: ${deviceTypeName}`);
@@ -449,9 +524,11 @@ export async function scanClientDevice(
   let matchedSoc: MobileSoC | undefined = undefined;
   let matchedPhoneModel: string | undefined = undefined;
   if (deviceType === 'smartphone') {
-    const socMatch = matchMobileSoc(rawGpuRenderer, ua, socs);
+    const socMatch = matchMobileSoc(rawGpuRenderer, ua, socs, detectedIphoneModel, os);
     matchedSoc = socMatch.soc;
-    matchedPhoneModel = socMatch.phoneModel;
+    matchedPhoneModel = socMatch.phoneModel || detectedIphoneModel || deviceTypeName;
+    detectionDetails.push(`SoC Móvil detectado: ${matchedSoc.name} (${matchedSoc.manufacturer}, ${matchedSoc.processNodeNm}nm)`);
+    detectionDetails.push(`Modelo de Smartphone: ${matchedPhoneModel}`);
   }
 
   // Calculate high accuracy score
@@ -822,16 +899,18 @@ function matchPsu(gpu: GPU, psus: PSU[], isLaptop: boolean, os?: string): PSU {
 }
 
 /**
- * Match Mobile SoC
+ * Match Mobile SoC (Snapdragon, Apple A-Series, Dimensity, Tensor, Exynos)
  */
 function matchMobileSoc(
   renderer: string,
   ua: string,
-  socs: MobileSoC[]
+  socs: MobileSoC[],
+  detectedPhoneModel?: string,
+  os?: string
 ): { soc: MobileSoC; phoneModel?: string } {
-  const clean = (renderer + ' ' + ua).toLowerCase();
+  const clean = (renderer + ' ' + ua + ' ' + (detectedPhoneModel || '')).toLowerCase();
 
-  let phoneModel: string | undefined = undefined;
+  let phoneModel: string | undefined = detectedPhoneModel;
   if (/SM-S928|Galaxy S24 Ultra/i.test(ua)) phoneModel = 'Samsung Galaxy S24 Ultra';
   else if (/SM-S918|Galaxy S23 Ultra/i.test(ua)) phoneModel = 'Samsung Galaxy S23 Ultra';
   else if (/Pixel 9/i.test(ua)) phoneModel = 'Google Pixel 9 Pro';
@@ -840,6 +919,41 @@ function matchMobileSoc(
   else if (/iPhone15/i.test(ua)) phoneModel = 'Apple iPhone 15 Pro';
   else if (/Poco X6 Pro/i.test(ua)) phoneModel = 'Xiaomi Poco X6 Pro';
 
+  // 1. Apple iPhone SoC matching by detected model or user agent
+  if (detectedPhoneModel?.includes('iPhone') || os === 'iOS' || clean.includes('apple') || clean.includes('iphone')) {
+    if (detectedPhoneModel?.includes('16 Pro') || clean.includes('16 pro') || clean.includes('a18 pro')) {
+      const s = socs.find(item => item.id === 'soc-a18pro' || item.name.includes('A18 Pro'));
+      if (s) return { soc: s, phoneModel: phoneModel || 'Apple iPhone 16 Pro' };
+    }
+    if (detectedPhoneModel?.includes('16') || clean.includes('16 plus') || clean.includes('a18')) {
+      const s = socs.find(item => item.id === 'soc-a18' || item.name.includes('A18'));
+      if (s) return { soc: s, phoneModel: phoneModel || 'Apple iPhone 16' };
+    }
+    if (detectedPhoneModel?.includes('15 Pro') || clean.includes('15 pro') || clean.includes('a17')) {
+      const s = socs.find(item => item.id === 'soc-a17pro' || item.name.includes('A17 Pro') || item.name.includes('A17'));
+      if (s) return { soc: s, phoneModel: phoneModel || 'Apple iPhone 15 Pro' };
+    }
+    if (detectedPhoneModel?.includes('15') || detectedPhoneModel?.includes('14 Pro') || clean.includes('a16')) {
+      const s = socs.find(item => item.id === 'soc-a16' || item.name.includes('A16'));
+      if (s) return { soc: s, phoneModel: phoneModel || 'Apple iPhone 15' };
+    }
+    if (detectedPhoneModel?.includes('14') || detectedPhoneModel?.includes('13') || clean.includes('a15')) {
+      const s = socs.find(item => item.id === 'soc-a15' || item.name.includes('A15'));
+      if (s) return { soc: s, phoneModel: phoneModel || 'Apple iPhone 14' };
+    }
+    if (detectedPhoneModel?.includes('12') || clean.includes('a14')) {
+      const s = socs.find(item => item.id === 'soc-a14' || item.name.includes('A14'));
+      if (s) return { soc: s, phoneModel: phoneModel || 'Apple iPhone 12' };
+    }
+    // Apple fallback
+    const appleSoc = socs.find(item => item.id === 'soc-a18pro') ||
+                     socs.find(item => item.id === 'soc-a17pro') ||
+                     socs.find(item => item.manufacturer === 'Apple') ||
+                     socs[0];
+    return { soc: appleSoc, phoneModel: phoneModel || 'Apple iPhone' };
+  }
+
+  // 2. Android Snapdragon / Dimensity / Tensor / Exynos
   if (clean.includes('830') || clean.includes('elite')) {
     const s = socs.find((item) => item.id === 'soc-8elite' || item.name.includes('8 Elite'));
     if (s) return { soc: s, phoneModel };
@@ -847,16 +961,6 @@ function matchMobileSoc(
 
   if (clean.includes('750') || clean.includes('8 gen 3')) {
     const s = socs.find((item) => item.id === 'soc-8gen3' || item.name.includes('8 Gen 3'));
-    if (s) return { soc: s, phoneModel };
-  }
-
-  if (clean.includes('a18') || clean.includes('iphone 16')) {
-    const s = socs.find((item) => item.id === 'soc-a18pro' || item.name.includes('A18'));
-    if (s) return { soc: s, phoneModel };
-  }
-
-  if (clean.includes('a17') || clean.includes('iphone 15 pro')) {
-    const s = socs.find((item) => item.name.includes('A17'));
     if (s) return { soc: s, phoneModel };
   }
 

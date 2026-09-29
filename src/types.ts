@@ -142,6 +142,7 @@ export interface BottleneckResult {
     ramSpeedPenaltyPct: number;
     storagePenaltyPct: number;
     recommendedResolution: string;
+    powerThrottlePct?: number;
   };
   laptopAnalysis?: {
     isLaptop: boolean;
@@ -151,6 +152,8 @@ export interface BottleneckResult {
     batteryDrainRisk: boolean;
     thermalThrottleRisk: 'Bajo' | 'Moderado' | 'Alto' | 'Severo';
     coolingGuidance: string;
+    isPsuDisabled?: boolean;
+    powerThrottlePct?: number;
   };
   displayAnalysis?: {
     totalMonitors: number;

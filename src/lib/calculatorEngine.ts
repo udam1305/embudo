@@ -283,7 +283,7 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
   // Laptop platform check and PSU toggle
   const isLaptop = config.platform === 'laptop' ||
                    config.deviceType === 'laptop' ||
-                   Boolean(cpu.platform === 'laptop' || cpu.isLaptop);
+                   Boolean(cpu.platform === 'laptop' || cpu.isLaptop || gpu.platform === 'laptop' || gpu.isLaptop);
   const psuDisabledForLaptop = Boolean(isLaptop && (config.ignorePsuForLaptop || !config.psu));
 
   // Power & PSU calculations
@@ -388,7 +388,15 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
   // VRAM penalty on FPS if saturating
   const vramFpsFactor = vramSaturationPct > 105 ? Math.max(0.40, 1 - (vramSaturationPct - 100) * 0.015) : 1.0;
 
-  const gpuBaseFps = (gpu.score1440p * 1.45) * resolutionFpsMult * upscalingFpsBoost * surroundFpsFactor * vramFpsFactor;
+  // Power throttling impact for laptops with underpowered external charger:
+  // If evaluated external charger has less wattage than system demands, the notebook drops TGP/clocks.
+  // When deactivated (psuDisabledForLaptop === true), full native OEM power (1.0 factor, no throttling) is used.
+  const laptopPowerThrottleFactor = (isLaptop && !psuDisabledForLaptop && userPsu && userPsu.wattage < systemEstimatedWatts)
+    ? Math.max(0.60, Number((userPsu.wattage / systemEstimatedWatts).toFixed(2)))
+    : 1.0;
+  const powerThrottlePct = Math.round((1 - laptopPowerThrottleFactor) * 100);
+
+  const gpuBaseFps = (gpu.score1440p * 1.45) * resolutionFpsMult * upscalingFpsBoost * surroundFpsFactor * vramFpsFactor * laptopPowerThrottleFactor;
   const cpuFactor = Math.min(1.0, penalizedCpuPower / (resolution === '1080p' ? 95 : 85));
 
   const gamePresets = [
@@ -529,6 +537,18 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
     });
   }
 
+  const laptopAnalysis = isLaptop ? {
+    isLaptop: true,
+    chassisType: (gpu.tdp >= 140 ? 'Gamer Alto Rendimiento' : gpu.tdp >= 85 ? 'Gamer Equilibrada' : cpu.tdp <= 35 ? 'Ultrabook / Liviana' : 'Workstation Móvil') as any,
+    combinedTdpWatts: cpu.tdp + gpu.tdp,
+    chargerCapacityWatts: psuDisabledForLaptop ? systemEstimatedWatts : (userPsu?.wattage || systemEstimatedWatts),
+    batteryDrainRisk: !psuDisabledForLaptop && Boolean(userPsu && userPsu.wattage < systemEstimatedWatts),
+    thermalThrottleRisk: (gpu.tdp >= 150 ? 'Alto' : gpu.tdp >= 100 ? 'Moderado' : 'Bajo') as any,
+    coolingGuidance: 'Elevar la base del portátil o usar base de refrigeración reduce temperaturas hasta 6-8°C y estabiliza el boost de reloj.',
+    isPsuDisabled: psuDisabledForLaptop,
+    powerThrottlePct
+  } : undefined;
+
   return {
     bottleneckPct,
     limitingFactor,
@@ -539,8 +559,10 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
       gpuLoadEst: Math.min(100, Math.round((penalizedCpuPower / (effectiveGpuScore + 0.1)) * 50 + (100 - effectiveGpuScore * 0.3))),
       ramSpeedPenaltyPct: ramPenaltyPct,
       storagePenaltyPct: storagePenaltyPct,
-      recommendedResolution: resolution === '8k' ? '8K con DLSS/FSR Rendimiento o 4K Nativo' : resolution === '1080p' && penalizedCpuPower < effectiveGpuScore ? '1440p (traslada carga a la GPU)' : resolution
+      recommendedResolution: resolution === '8k' ? '8K con DLSS/FSR Rendimiento o 4K Nativo' : resolution === '1080p' && penalizedCpuPower < effectiveGpuScore ? '1440p (traslada carga a la GPU)' : resolution,
+      powerThrottlePct
     },
+    laptopAnalysis,
     displayAnalysis: {
       totalMonitors: monitorCount,
       mode: monitorMode,

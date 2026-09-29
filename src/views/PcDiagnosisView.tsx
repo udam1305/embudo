@@ -1330,6 +1330,24 @@ export const PcDiagnosisView: React.FC = () => {
                       {currentResult.powerStats.userPsuEvaluation.message}
                     </p>
                   )}
+
+                  {isCurrentLaptop && !currentConfig.ignorePsuForLaptop && Boolean(currentResult.technicalDetails?.powerThrottlePct && currentResult.technicalDetails.powerThrottlePct > 0) && (
+                    <div className="mt-3 p-3 rounded-xl bg-purple-950/40 border border-purple-500/40 flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-purple-400 shrink-0" />
+                        <span className="text-xs text-purple-200">
+                          Este cargador provoca <strong>Power Throttling (-{currentResult.technicalDetails.powerThrottlePct}% FPS)</strong>.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateConfig({ ignorePsuForLaptop: true })}
+                        className="px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] transition-colors cursor-pointer shadow-sm shadow-purple-900"
+                      >
+                        ⚡ Desactivar fuente (100% Nativo OEM)
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </div>
