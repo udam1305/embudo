@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Cpu,
   Monitor,
@@ -262,7 +262,7 @@ export const PcDiagnosisView: React.FC = () => {
 
   // Filtered CPUs
   const filteredCpus = useMemo(() => {
-    return cpus.filter(c => {
+    const list = cpus.filter(c => {
       const matchSearch = c.name.toLowerCase().includes(cpuSearch.toLowerCase()) || 
                           c.socket.toLowerCase().includes(cpuSearch.toLowerCase());
       const matchBrand = cpuFilterBrand === 'All' || c.brand === cpuFilterBrand;
@@ -282,7 +282,11 @@ export const PcDiagnosisView: React.FC = () => {
 
       return matchSearch && matchBrand && matchGen && matchPlatform;
     });
-  }, [cpus, cpuSearch, cpuFilterBrand, cpuFilterGen, platformMode]);
+    if (currentConfig.cpu && !list.some(c => c.id === currentConfig.cpu.id)) {
+      return [currentConfig.cpu, ...list];
+    }
+    return list;
+  }, [cpus, cpuSearch, cpuFilterBrand, cpuFilterGen, platformMode, currentConfig.cpu]);
 
   // Grouped and sorted by generation
   const cpuGroups = useMemo(() => {
@@ -303,7 +307,7 @@ export const PcDiagnosisView: React.FC = () => {
 
   // Filtered GPUs
   const filteredGpus = useMemo(() => {
-    return gpus.filter(g => {
+    const list = gpus.filter(g => {
       const matchSearch = g.name.toLowerCase().includes(gpuSearch.toLowerCase());
       const matchBrand = gpuFilterBrand === 'All' || g.brand === gpuFilterBrand;
       const genMeta = getGpuGenerationMeta(g);
@@ -322,7 +326,11 @@ export const PcDiagnosisView: React.FC = () => {
 
       return matchSearch && matchBrand && matchGen && matchPlatform;
     });
-  }, [gpus, gpuSearch, gpuFilterBrand, gpuFilterGen, platformMode]);
+    if (currentConfig.gpu && !list.some(g => g.id === currentConfig.gpu.id)) {
+      return [currentConfig.gpu, ...list];
+    }
+    return list;
+  }, [gpus, gpuSearch, gpuFilterBrand, gpuFilterGen, platformMode, currentConfig.gpu]);
 
   // Grouped and sorted GPUs by generation
   const gpuGroups = useMemo(() => {
@@ -807,7 +815,7 @@ export const PcDiagnosisView: React.FC = () => {
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">
                     {currentConfig.motherboard.socket}
                   </span>
-                  {currentConfig.cpu.socket && currentConfig.motherboard.socket && currentConfig.cpu.socket.toLowerCase() === currentConfig.motherboard.socket.toLowerCase() ? (
+                  {currentConfig.cpu.socket && currentConfig.motherboard.socket && cleanSocket(currentConfig.cpu.socket) === cleanSocket(currentConfig.motherboard.socket) ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                       Socket Compatible ✓
                     </span>
@@ -839,12 +847,18 @@ export const PcDiagnosisView: React.FC = () => {
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
-                <option value="">Seleccionar Placa Base ({mbFilterBrand === 'All' ? 'Todas' : mbFilterBrand} • {displayMotherboards.length} encontradas)...</option>
+                {currentConfig.motherboard ? (
+                  <option value={currentConfig.motherboard.id}>
+                    ⭐ {currentConfig.motherboard.brand ? `${currentConfig.motherboard.brand} ` : ''}{currentConfig.motherboard.name} • Socket {currentConfig.motherboard.socket} ({currentConfig.motherboard.chipset || currentConfig.motherboard.formFactor})
+                  </option>
+                ) : (
+                  <option value="">Seleccionar Placa Base ({mbFilterBrand === 'All' ? 'Todas' : mbFilterBrand} • {displayMotherboards.length} encontradas)...</option>
+                )}
                 {/* Compatible socket motherboards first */}
-                {currentConfig.cpu.socket && displayMotherboards.some(m => m.socket?.toLowerCase() === currentConfig.cpu.socket?.toLowerCase()) && (
+                {currentConfig.cpu.socket && (
                   <optgroup label={`─── COMPATIBLES CON SOCKET ${currentConfig.cpu.socket.toUpperCase()} ───`}>
                     {displayMotherboards
-                      .filter(m => m.socket?.toLowerCase() === currentConfig.cpu.socket?.toLowerCase())
+                      .filter(m => m.id !== currentConfig.motherboard?.id && cleanSocket(m.socket) === cleanSocket(currentConfig.cpu.socket))
                       .slice(0, 250)
                       .map(m => (
                         <option key={m.id} value={m.id}>
@@ -855,7 +869,7 @@ export const PcDiagnosisView: React.FC = () => {
                 )}
                 <optgroup label={`─── OTRAS PLACAS BASE (${mbFilterBrand === 'All' ? 'BUILDCORES OPEN DB' : mbFilterBrand.toUpperCase()}) ───`}>
                   {displayMotherboards
-                    .filter(m => !currentConfig.cpu.socket || m.socket?.toLowerCase() !== currentConfig.cpu.socket?.toLowerCase())
+                    .filter(m => m.id !== currentConfig.motherboard?.id && (!currentConfig.cpu.socket || cleanSocket(m.socket) !== cleanSocket(currentConfig.cpu.socket)))
                     .slice(0, 250)
                     .map(m => (
                       <option key={m.id} value={m.id}>
@@ -944,18 +958,26 @@ export const PcDiagnosisView: React.FC = () => {
                 id="diag-select-ram"
                 name="selectedRam"
                 aria-label="Seleccionar memoria RAM"
-                value={currentConfig.ram.id}
+                value={currentConfig.ram?.id || ''}
                 onChange={(e) => {
                   const found = rams.find(r => r.id === e.target.value);
                   if (found) updateConfig({ ram: found });
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
-                {displayRams.slice(0, 300).map(r => (
-                  <option key={r.id} value={r.id}>
-                    {r.brand ? `${r.brand} ` : ''}{r.name || `${r.capacityGb}GB ${r.type}`} • {r.speedMhz}MHz (CL{r.casLatency})
+                {currentConfig.ram && (
+                  <option value={currentConfig.ram.id}>
+                    ⭐ {currentConfig.ram.brand ? `${currentConfig.ram.brand} ` : ''}{currentConfig.ram.name || `${currentConfig.ram.capacityGb}GB ${currentConfig.ram.type}`} • {currentConfig.ram.speedMhz}MHz (CL{currentConfig.ram.casLatency})
                   </option>
-                ))}
+                )}
+                {displayRams
+                  .filter(r => r.id !== currentConfig.ram?.id)
+                  .slice(0, 300)
+                  .map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.brand ? `${r.brand} ` : ''}{r.name || `${r.capacityGb}GB ${r.type}`} • {r.speedMhz}MHz (CL{r.casLatency})
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -1037,18 +1059,26 @@ export const PcDiagnosisView: React.FC = () => {
                 id="diag-select-storage"
                 name="selectedStorage"
                 aria-label="Seleccionar unidad de almacenamiento"
-                value={currentConfig.storage.id}
+                value={currentConfig.storage?.id || ''}
                 onChange={(e) => {
                   const found = storages.find(s => s.id === e.target.value);
                   if (found) updateConfig({ storage: found });
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
-                {filteredStorages.slice(0, 300).map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.brand ? `${s.brand} ` : ''}{s.type} {s.capacityGb >= 1000 ? `${s.capacityGb / 1000}TB` : `${s.capacityGb}GB`} • ~{s.readSpeedMb} MB/s
+                {currentConfig.storage && (
+                  <option value={currentConfig.storage.id}>
+                    ⭐ {currentConfig.storage.brand ? `${currentConfig.storage.brand} ` : ''}{currentConfig.storage.name || `${currentConfig.storage.type} ${currentConfig.storage.capacityGb}GB`} • ~{currentConfig.storage.readSpeedMb} MB/s
                   </option>
-                ))}
+                )}
+                {displayStorages
+                  .filter(s => s.id !== currentConfig.storage?.id)
+                  .slice(0, 300)
+                  .map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.brand ? `${s.brand} ` : ''}{s.name || `${s.type} ${s.capacityGb >= 1000 ? `${s.capacityGb / 1000}TB` : `${s.capacityGb}GB`}`} • ~{s.readSpeedMb} MB/s
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -1171,22 +1201,32 @@ export const PcDiagnosisView: React.FC = () => {
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
+                {currentConfig.psu && (
+                  <option value={currentConfig.psu.id}>
+                    ⭐ {currentConfig.psu.name} {currentConfig.psu.brand && !currentConfig.psu.name.includes(currentConfig.psu.brand) ? `(${currentConfig.psu.brand})` : ''} • {currentConfig.psu.wattage}W ({currentConfig.psu.efficiency})
+                  </option>
+                )}
                 {/* Si es laptop, poner los cargadores de laptop arriba */}
-                {filteredPsus.some(p => p.brand === 'Laptop Original') && (
+                {displayPsus.some(p => p.brand === 'Laptop Original') && (
                   <optgroup label="─── CARGADORES / ADAPTADORES DE NOTEBOOK ───">
-                    {filteredPsus.filter(p => p.brand === 'Laptop Original').map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
+                    {displayPsus
+                      .filter(p => p.id !== currentConfig.psu?.id && p.brand === 'Laptop Original')
+                      .map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
                   </optgroup>
                 )}
                 <optgroup label={`─── FUENTES DE PODER (${psuFilterBrand === 'All' ? 'TODAS LAS MARCAS' : psuFilterBrand.toUpperCase()}) ───`}>
-                  {filteredPsus.filter(p => p.brand !== 'Laptop Original').slice(0, 300).map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} {p.brand && !p.name.includes(p.brand) ? `(${p.brand})` : ''} • {p.wattage}W ({p.efficiency})
-                    </option>
-                  ))}
+                  {displayPsus
+                    .filter(p => p.id !== currentConfig.psu?.id && p.brand !== 'Laptop Original')
+                    .slice(0, 300)
+                    .map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.brand && !p.name.includes(p.brand) ? `(${p.brand})` : ''} • {p.wattage}W ({p.efficiency})
+                      </option>
+                    ))}
                 </optgroup>
               </select>
 

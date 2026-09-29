@@ -59,7 +59,9 @@ export interface RAM {
 
 export interface Storage {
   id: string;
-  type: 'NVMe Gen5' | 'NVMe Gen4' | 'NVMe Gen3' | 'SATA SSD' | 'HDD';
+  name?: string;
+  brand?: string;
+  type: 'NVMe Gen5' | 'NVMe Gen4' | 'NVMe Gen3' | 'SATA SSD' | 'HDD' | string;
   capacityGb: number;
   readSpeedMb: number;
 }
