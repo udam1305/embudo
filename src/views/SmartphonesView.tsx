@@ -20,7 +20,8 @@ import {
   Info,
   ChevronRight,
   ShieldCheck,
-  Cpu
+  Cpu,
+  Scan
 } from 'lucide-react';
 import { useHardware } from '../context/HardwareContext';
 import { calculateMobileDiagnostic } from '../lib/calculatorEngine';
@@ -38,6 +39,7 @@ import {
 } from '../lib/mobileSpecsClient';
 import { PhoneDetailsModal } from '../components/PhoneDetailsModal';
 import { PhoneComparisonView } from '../components/PhoneComparisonView';
+import { DeviceScannerModal } from '../components/DeviceScannerModal';
 
 export const SmartphonesView: React.FC = () => {
   const { socs } = useHardware();
@@ -76,6 +78,7 @@ export const SmartphonesView: React.FC = () => {
   const [usageProfile, setUsageProfile] = useState<'gaming_hardcore' | 'gaming_casual' | 'emulation' | 'multitask_social' | 'content_creation'>('gaming_hardcore');
   const [compareSocId, setCompareSocId] = useState<string>(socs[1]?.id || 'soc-a18pro');
   const [showSocComparison, setShowSocComparison] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // Popular search suggestions
   const searchSuggestions = [
@@ -306,8 +309,16 @@ export const SmartphonesView: React.FC = () => {
           </p>
         </div>
 
-        {/* Verification badges */}
+        {/* Verification badges & Scan */}
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setScannerOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-teal-500/20 to-cyan-500/20 hover:from-teal-500/30 hover:to-cyan-500/30 border border-cyan-500/40 text-cyan-300 text-xs font-bold transition-all shadow-sm cursor-pointer uppercase tracking-wider"
+          >
+            <Scan className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span>Auto-Escanear Mi Dispositivo</span>
+          </button>
+
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
             <span>Solo Teléfonos</span>
@@ -1011,6 +1022,17 @@ export const SmartphonesView: React.FC = () => {
         onClose={() => setSelectedModalSlug(null)}
         onDiagnoseSoc={handleDiagnoseSoc}
         onAddToCompare={handleAddToCompare}
+      />
+
+      {/* Device Hardware Scanner Modal */}
+      <DeviceScannerModal
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onApplyAndNavigate={(target) => {
+          if (target === 'pc-diag') {
+            window.location.hash = 'pc-diag';
+          }
+        }}
       />
     </div>
   );

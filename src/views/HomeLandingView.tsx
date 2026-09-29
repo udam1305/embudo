@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Cpu,
   Smartphone,
@@ -11,10 +11,12 @@ import {
   Activity,
   Layers,
   BarChart3,
-  ShieldCheck
+  ShieldCheck,
+  Scan
 } from 'lucide-react';
 import { ActiveTab } from '../components/Navbar';
 import { useHardware } from '../context/HardwareContext';
+import { DeviceScannerModal } from '../components/DeviceScannerModal';
 
 interface HomeLandingViewProps {
   setActiveTab: (tab: ActiveTab) => void;
@@ -22,6 +24,7 @@ interface HomeLandingViewProps {
 
 export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ setActiveTab }) => {
   const { currentConfig, currentResult, updateConfig } = useHardware();
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   return (
     <div className="space-y-12 pb-12">
@@ -47,14 +50,23 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ setActiveTab }
         </p>
 
         {/* Quick Actions */}
-        <div className="flex flex-wrap items-center justify-center gap-4">
+        <div className="flex flex-wrap items-center justify-center gap-3.5">
+          <button
+            id="hero-scan-device-btn"
+            onClick={() => setScannerOpen(true)}
+            className="flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-teal-500/20 via-cyan-500/20 to-blue-500/20 hover:from-teal-500/30 hover:to-blue-500/30 text-cyan-300 font-bold text-sm border border-cyan-500/40 shadow-xl shadow-cyan-600/10 transition-all uppercase tracking-wider cursor-pointer group"
+          >
+            <Scan className="w-4 h-4 text-cyan-400 group-hover:rotate-90 transition-transform duration-300 animate-pulse" />
+            <span>Auto-Escanear Mi Dispositivo</span>
+          </button>
+
           <button
             id="hero-start-pc-btn"
             onClick={() => setActiveTab('pc-diag')}
             className="flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-sm shadow-xl shadow-cyan-600/20 transition-all uppercase tracking-wider cursor-pointer"
           >
             <Cpu className="w-4 h-4 text-white" />
-            Iniciar Diagnóstico de PC
+            Diagnóstico Manual PC
             <ArrowRight className="w-4 h-4" />
           </button>
 
@@ -64,7 +76,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ setActiveTab }
             className="flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#151921] hover:bg-[#1C222D] text-slate-200 font-bold text-sm border border-slate-700 hover:border-slate-600 transition-all cursor-pointer uppercase tracking-wider"
           >
             <Smartphone className="w-4 h-4 text-cyan-400" />
-            Diagnóstico Móvil (SoC & Throttling)
+            Diagnóstico Móvil (SoC)
           </button>
         </div>
       </section>
@@ -280,6 +292,13 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ setActiveTab }
           </button>
         </div>
       </section>
+
+      {/* Device Hardware Scanner Modal */}
+      <DeviceScannerModal
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onApplyAndNavigate={setActiveTab}
+      />
     </div>
   );
 };

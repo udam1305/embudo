@@ -27,13 +27,16 @@ import {
   Laptop,
   BatteryCharging,
   Thermometer,
-  MessageSquare
+  MessageSquare,
+  Scan
 } from 'lucide-react';
 import { useHardware } from '../context/HardwareContext';
 import { useAuth } from '../context/AuthContext';
 import { CPU, GPU, RAM, Storage, Motherboard, ResolutionType, WorkloadType, UpscalingTechnology, UpscalingMode } from '../types';
 import { ExportCardModal } from '../components/ExportCardModal';
 import { CommunityCommentsSection } from '../components/CommunityCommentsSection';
+import { DeviceScannerModal } from '../components/DeviceScannerModal';
+import { cleanSocket } from '../utils/hardwareDetector';
 import { groupCpusByGeneration, getCpuGenerationMeta, KNOWN_CPU_GENERATIONS } from '../utils/cpuGenerations';
 import { groupGpusByGeneration, getGpuGenerationMeta, KNOWN_GPU_GENERATIONS } from '../utils/gpuGenerations';
 import confetti from 'canvas-confetti';
@@ -43,6 +46,7 @@ export const PcDiagnosisView: React.FC = () => {
   const { saveDiagnosis, user } = useAuth();
 
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // Platform selection (Desktop PC vs Notebook/Laptop vs All)
@@ -181,6 +185,72 @@ export const PcDiagnosisView: React.FC = () => {
       return matchBrand && matchSearch;
     });
   }, [psus, psuFilterBrand, psuSearch]);
+
+  // Ensure currently selected components are always at the top of the display list
+  const displayMotherboards = useMemo(() => {
+    if (currentConfig.motherboard) {
+      const rest = filteredMotherboards.filter(m => m.id !== currentConfig.motherboard.id);
+      return [currentConfig.motherboard, ...rest];
+    }
+    return filteredMotherboards;
+  }, [filteredMotherboards, currentConfig.motherboard]);
+
+  const displayRams = useMemo(() => {
+    if (currentConfig.ram) {
+      const rest = filteredRams.filter(r => r.id !== currentConfig.ram.id);
+      return [currentConfig.ram, ...rest];
+    }
+    return filteredRams;
+  }, [filteredRams, currentConfig.ram]);
+
+  const displayStorages = useMemo(() => {
+    if (currentConfig.storage) {
+      const rest = filteredStorages.filter(s => s.id !== currentConfig.storage.id);
+      return [currentConfig.storage, ...rest];
+    }
+    return filteredStorages;
+  }, [filteredStorages, currentConfig.storage]);
+
+  const displayPsus = useMemo(() => {
+    if (currentConfig.psu) {
+      const rest = filteredPsus.filter(p => p.id !== currentConfig.psu.id);
+      return [currentConfig.psu, ...rest];
+    }
+    return filteredPsus;
+  }, [filteredPsus, currentConfig.psu]);
+
+  // Sync platform mode and reset filters when hardware changes from scanner
+  useEffect(() => {
+    if (currentConfig.platform) {
+      setPlatformMode(currentConfig.platform);
+    }
+    if (currentConfig.cpu.brand === 'Apple') {
+      setCpuFilterBrand('Apple');
+      setGpuFilterBrand('Apple');
+    } else {
+      setCpuFilterBrand('All');
+      setGpuFilterBrand('All');
+    }
+    setCpuFilterGen('All');
+    setGpuFilterGen('All');
+    setCpuSearch('');
+    setGpuSearch('');
+    setMbFilterBrand('All');
+    setRamFilterBrand('All');
+    setStorageFilterBrand('All');
+    setPsuFilterBrand('All');
+    setMbSearch('');
+    setRamSearch('');
+    setStorageSearch('');
+    setPsuSearch('');
+  }, [
+    currentConfig.platform,
+    currentConfig.cpu.id,
+    currentConfig.gpu.id,
+    currentConfig.motherboard?.id,
+    currentConfig.ram?.id,
+    currentConfig.storage?.id
+  ]);
 
   // Available CPU generations based on brand filter
   const availableGenerations = useMemo(() => {
@@ -329,7 +399,16 @@ export const PcDiagnosisView: React.FC = () => {
         </div>
 
         {/* Top actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            id="diag-scan-device-btn"
+            onClick={() => setShowScannerModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 via-teal-500 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-cyan-600/20 group"
+          >
+            <Scan className="w-4 h-4 text-cyan-200 group-hover:rotate-90 transition-transform duration-300 animate-pulse" />
+            <span>Auto-Escanear Mi Dispositivo</span>
+          </button>
+
           <button
             id="diag-save-btn"
             onClick={handleSaveDiagnosis}
@@ -660,7 +739,7 @@ export const PcDiagnosisView: React.FC = () => {
                 </label>
                 {/* Brand Filter Pills for Motherboard */}
                 <div className="flex items-center gap-1 text-[11px] flex-wrap">
-                  {['All', 'ASUS', 'MSI', 'Gigabyte', 'ASRock'].map(b => (
+                  {['All', 'Apple', 'ASUS', 'MSI', 'Gigabyte', 'ASRock'].map(b => (
                     <button
                       key={b}
                       type="button"
@@ -760,11 +839,11 @@ export const PcDiagnosisView: React.FC = () => {
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
-                <option value="">Seleccionar Placa Base ({mbFilterBrand === 'All' ? 'Todas' : mbFilterBrand} • {filteredMotherboards.length} encontradas)...</option>
+                <option value="">Seleccionar Placa Base ({mbFilterBrand === 'All' ? 'Todas' : mbFilterBrand} • {displayMotherboards.length} encontradas)...</option>
                 {/* Compatible socket motherboards first */}
-                {currentConfig.cpu.socket && filteredMotherboards.some(m => m.socket?.toLowerCase() === currentConfig.cpu.socket?.toLowerCase()) && (
+                {currentConfig.cpu.socket && displayMotherboards.some(m => m.socket?.toLowerCase() === currentConfig.cpu.socket?.toLowerCase()) && (
                   <optgroup label={`─── COMPATIBLES CON SOCKET ${currentConfig.cpu.socket.toUpperCase()} ───`}>
-                    {filteredMotherboards
+                    {displayMotherboards
                       .filter(m => m.socket?.toLowerCase() === currentConfig.cpu.socket?.toLowerCase())
                       .slice(0, 250)
                       .map(m => (
@@ -775,7 +854,7 @@ export const PcDiagnosisView: React.FC = () => {
                   </optgroup>
                 )}
                 <optgroup label={`─── OTRAS PLACAS BASE (${mbFilterBrand === 'All' ? 'BUILDCORES OPEN DB' : mbFilterBrand.toUpperCase()}) ───`}>
-                  {filteredMotherboards
+                  {displayMotherboards
                     .filter(m => !currentConfig.cpu.socket || m.socket?.toLowerCase() !== currentConfig.cpu.socket?.toLowerCase())
                     .slice(0, 250)
                     .map(m => (
@@ -795,7 +874,7 @@ export const PcDiagnosisView: React.FC = () => {
                 </label>
                 {/* Brand Filter Pills for RAM */}
                 <div className="flex items-center gap-1 text-[11px] flex-wrap">
-                  {['All', 'Corsair', 'G.Skill', 'Kingston', 'Crucial'].map(b => (
+                  {['All', 'Apple', 'Corsair', 'G.Skill', 'Kingston', 'Crucial'].map(b => (
                     <button
                       key={b}
                       type="button"
@@ -872,7 +951,7 @@ export const PcDiagnosisView: React.FC = () => {
                 }}
                 className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
               >
-                {filteredRams.slice(0, 300).map(r => (
+                {displayRams.slice(0, 300).map(r => (
                   <option key={r.id} value={r.id}>
                     {r.brand ? `${r.brand} ` : ''}{r.name || `${r.capacityGb}GB ${r.type}`} • {r.speedMhz}MHz (CL{r.casLatency})
                   </option>
@@ -1936,6 +2015,17 @@ export const PcDiagnosisView: React.FC = () => {
           onClose={() => setShowExportModal(false)}
         />
       )}
+
+      {/* Device Hardware Scanner Modal */}
+      <DeviceScannerModal
+        isOpen={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+        onApplyAndNavigate={(target) => {
+          if (target === 'smartphones') {
+            window.location.hash = 'smartphones';
+          }
+        }}
+      />
     </div>
   );
 };

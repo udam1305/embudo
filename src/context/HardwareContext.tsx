@@ -52,6 +52,9 @@ const DEFAULT_CONFIG: DiagnosisConfig = {
   ram: INITIAL_RAMS.find(r => r.id === 'ram-corsair-veng-rgb-32-6000') || INITIAL_RAMS[0], // Corsair Vengeance RGB 32GB 6000MHz
   storage: INITIAL_STORAGES[1], // 2TB NVMe Gen4
   psu: INITIAL_PSUS.find(p => p.id === 'psu-corsair-rm850x-shift') || INITIAL_PSUS[6] || INITIAL_PSUS[0], // Corsair RM850x SHIFT ATX 3.1
+  motherboard: INITIAL_MOTHERBOARDS.find(m => m.id === 'mb-asus-b650-plus-wifi') || INITIAL_MOTHERBOARDS[2] || INITIAL_MOTHERBOARDS[0],
+  platform: 'desktop',
+  deviceType: 'desktop',
   resolution: '1440p',
   monitorCount: 1,
   monitorMode: 'gaming_primary',

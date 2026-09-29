@@ -117,6 +117,7 @@ export interface DiagnosisConfig {
   workloads?: WorkloadType[];
   os: 'Windows 11' | 'Windows 10' | 'Linux' | 'macOS';
   deviceType?: DeviceType; // 'desktop' | 'laptop'
+  platform?: 'desktop' | 'laptop';
   laptopChargerWatts?: number; // e.g. 65, 100, 140, 180, 230, 280, 330
   // Multi-Monitor & Scaling Configuration
   monitorCount?: number; // 1, 2, 3, 4

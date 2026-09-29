@@ -13,10 +13,12 @@ import {
   X,
   Sparkles,
   Search,
-  CheckCircle2
+  CheckCircle2,
+  Scan
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useHardware } from '../context/HardwareContext';
+import { DeviceScannerModal } from './DeviceScannerModal';
 
 export type ActiveTab = 'landing' | 'pc-diag' | 'calculators' | 'comparator' | 'smartphones' | 'catalog' | 'account' | 'admin' | 'support';
 
@@ -31,6 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const navItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'pc-diag', label: 'Diagnóstico PC & Laptop', icon: Cpu },
@@ -104,7 +107,19 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </nav>
 
           {/* Right Action Icons & Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Auto-Scan Device Button */}
+            <button
+              id="nav-scan-device-btn"
+              onClick={() => setScannerOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-gradient-to-r from-cyan-600/30 to-blue-600/30 hover:from-cyan-600/50 hover:to-blue-600/50 text-cyan-300 border border-cyan-500/40 rounded-full transition-all cursor-pointer uppercase tracking-wider shadow-sm group"
+              title="Escanear y auto-detectar componentes de este dispositivo"
+            >
+              <Scan className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-90 transition-transform duration-300 animate-pulse" />
+              <span className="hidden sm:inline">Escanear PC/Móvil</span>
+              <span className="sm:hidden">Escanear</span>
+            </button>
+
             {/* Quick Search Button */}
             <button
               id="nav-quick-search-btn"
@@ -253,6 +268,13 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </div>
         </div>
       )}
+
+      {/* Device Hardware Scanner Modal */}
+      <DeviceScannerModal
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onApplyAndNavigate={handleNavClick}
+      />
     </header>
   );
 };

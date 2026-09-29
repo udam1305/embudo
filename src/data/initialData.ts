@@ -773,7 +773,64 @@ export const INITIAL_CPUS: CPU[] = [
     pcieGen: 3
   },
 
-  // --- Apple Silicon (MacBook Pro / MacBook Air) ---
+  // --- Apple Silicon (MacBook Pro / MacBook Air / Mac Studio) ---
+  {
+    id: 'cpu-apple-m4-max',
+    name: 'Apple M4 Max (16-core CPU • MacBook Pro)',
+    brand: 'Apple',
+    socket: 'Apple SoC',
+    platform: 'laptop',
+    isLaptop: true,
+    cores: 16,
+    threads: 16,
+    baseClock: 4.4,
+    boostClock: 4.4,
+    tdp: 45,
+    gamingScore: 94,
+    multicoreScore: 98,
+    singlecoreScore: 99,
+    releaseYear: 2024,
+    pcieGen: 4,
+    integratedGpu: 'Apple M4 Max GPU (40-core)'
+  },
+  {
+    id: 'cpu-apple-m4-pro',
+    name: 'Apple M4 Pro (14-core CPU • MacBook Pro)',
+    brand: 'Apple',
+    socket: 'Apple SoC',
+    platform: 'laptop',
+    isLaptop: true,
+    cores: 14,
+    threads: 14,
+    baseClock: 4.4,
+    boostClock: 4.4,
+    tdp: 35,
+    gamingScore: 89,
+    multicoreScore: 92,
+    singlecoreScore: 98,
+    releaseYear: 2024,
+    pcieGen: 4,
+    integratedGpu: 'Apple M4 Pro GPU (20-core)'
+  },
+  {
+    id: 'cpu-apple-m4',
+    name: 'Apple M4 (10-core CPU • MacBook Air / Pro / iMac)',
+    brand: 'Apple',
+    socket: 'Apple SoC',
+    platform: 'laptop',
+    isLaptop: true,
+    cores: 10,
+    threads: 10,
+    baseClock: 4.4,
+    boostClock: 4.4,
+    tdp: 22,
+    gamingScore: 82,
+    multicoreScore: 80,
+    singlecoreScore: 97,
+    releaseYear: 2024,
+    pcieGen: 4,
+    integratedGpu: 'Apple M4 GPU (10-core)'
+  },
   {
     id: 'cpu-apple-m3-max',
     name: 'Apple M3 Max (16-core CPU • MacBook Pro)',
@@ -832,6 +889,25 @@ export const INITIAL_CPUS: CPU[] = [
     integratedGpu: 'Apple M3 GPU (10-core)'
   },
   {
+    id: 'cpu-apple-m2-max',
+    name: 'Apple M2 Max (12-core CPU • MacBook Pro)',
+    brand: 'Apple',
+    socket: 'Apple SoC',
+    platform: 'laptop',
+    isLaptop: true,
+    cores: 12,
+    threads: 12,
+    baseClock: 3.49,
+    boostClock: 3.49,
+    tdp: 36,
+    gamingScore: 85,
+    multicoreScore: 86,
+    singlecoreScore: 89,
+    releaseYear: 2023,
+    pcieGen: 4,
+    integratedGpu: 'Apple M2 Max GPU (38-core)'
+  },
+  {
     id: 'cpu-apple-m2-pro',
     name: 'Apple M2 Pro (12-core CPU • MacBook Pro)',
     brand: 'Apple',
@@ -868,6 +944,44 @@ export const INITIAL_CPUS: CPU[] = [
     releaseYear: 2022,
     pcieGen: 4,
     integratedGpu: 'Apple M2 GPU (10-core)'
+  },
+  {
+    id: 'cpu-apple-m1-max',
+    name: 'Apple M1 Max (10-core CPU • MacBook Pro)',
+    brand: 'Apple',
+    socket: 'Apple SoC',
+    platform: 'laptop',
+    isLaptop: true,
+    cores: 10,
+    threads: 10,
+    baseClock: 3.2,
+    boostClock: 3.2,
+    tdp: 30,
+    gamingScore: 75,
+    multicoreScore: 76,
+    singlecoreScore: 78,
+    releaseYear: 2021,
+    pcieGen: 4,
+    integratedGpu: 'Apple M1 Max GPU (32-core)'
+  },
+  {
+    id: 'cpu-apple-m1-pro',
+    name: 'Apple M1 Pro (10-core CPU • MacBook Pro)',
+    brand: 'Apple',
+    socket: 'Apple SoC',
+    platform: 'laptop',
+    isLaptop: true,
+    cores: 10,
+    threads: 10,
+    baseClock: 3.2,
+    boostClock: 3.2,
+    tdp: 30,
+    gamingScore: 70,
+    multicoreScore: 72,
+    singlecoreScore: 78,
+    releaseYear: 2021,
+    pcieGen: 4,
+    integratedGpu: 'Apple M1 Pro GPU (16-core)'
   },
   {
     id: 'cpu-apple-m1',
@@ -2552,6 +2666,58 @@ export const INITIAL_GPUS: GPU[] = [
     releaseYear: 2024,
     dlssFsrSupport: 'Intel XeSS / AI Upscaling'
   },
+  // --- Apple Silicon GPUs (MacBook Pro / MacBook Air / Mac Studio) ---
+  {
+    id: 'gpu-apple-m4-max',
+    name: 'Apple M4 Max GPU (40 Núcleos)',
+    brand: 'Apple',
+    vram: 36,
+    vramType: 'Memoria Unificada LPDDR5X',
+    tdp: 45,
+    recommendedPsu: 140,
+    platform: 'laptop',
+    isLaptop: true,
+    score1080p: 94,
+    score1440p: 86,
+    score4k: 72,
+    rayTracingScore: 82,
+    releaseYear: 2024,
+    dlssFsrSupport: 'MetalFX Upscaling (Spatial & Temporal)'
+  },
+  {
+    id: 'gpu-apple-m4-pro',
+    name: 'Apple M4 Pro GPU (20 Núcleos)',
+    brand: 'Apple',
+    vram: 24,
+    vramType: 'Memoria Unificada LPDDR5X',
+    tdp: 35,
+    recommendedPsu: 100,
+    platform: 'laptop',
+    isLaptop: true,
+    score1080p: 78,
+    score1440p: 62,
+    score4k: 42,
+    rayTracingScore: 65,
+    releaseYear: 2024,
+    dlssFsrSupport: 'MetalFX Upscaling'
+  },
+  {
+    id: 'gpu-apple-m4',
+    name: 'Apple M4 GPU (10 Núcleos)',
+    brand: 'Apple',
+    vram: 16,
+    vramType: 'Memoria Unificada LPDDR5X',
+    tdp: 22,
+    recommendedPsu: 70,
+    platform: 'laptop',
+    isLaptop: true,
+    score1080p: 56,
+    score1440p: 36,
+    score4k: 18,
+    rayTracingScore: 40,
+    releaseYear: 2024,
+    dlssFsrSupport: 'MetalFX Upscaling'
+  },
   {
     id: 'gpu-apple-m3-max',
     name: 'Apple M3 Max GPU (40 Núcleos)',
@@ -2601,6 +2767,108 @@ export const INITIAL_GPUS: GPU[] = [
     score4k: 14,
     rayTracingScore: 30,
     releaseYear: 2023,
+    dlssFsrSupport: 'MetalFX Upscaling'
+  },
+  {
+    id: 'gpu-apple-m2-max',
+    name: 'Apple M2 Max GPU (38 Núcleos)',
+    brand: 'Apple',
+    vram: 32,
+    vramType: 'Memoria Unificada LPDDR5',
+    tdp: 36,
+    recommendedPsu: 140,
+    platform: 'laptop',
+    isLaptop: true,
+    score1080p: 80,
+    score1440p: 68,
+    score4k: 50,
+    rayTracingScore: 55,
+    releaseYear: 2023,
+    dlssFsrSupport: 'MetalFX Upscaling'
+  },
+  {
+    id: 'gpu-apple-m2-pro',
+    name: 'Apple M2 Pro GPU (19 Núcleos)',
+    brand: 'Apple',
+    vram: 16,
+    vramType: 'Memoria Unificada LPDDR5',
+    tdp: 30,
+    recommendedPsu: 100,
+    platform: 'laptop',
+    isLaptop: true,
+    score1080p: 62,
+    score1440p: 42,
+    score4k: 24,
+    rayTracingScore: 40,
+    releaseYear: 2023,
+    dlssFsrSupport: 'MetalFX Upscaling'
+  },
+  {
+    id: 'gpu-apple-m2',
+    name: 'Apple M2 GPU (10 Núcleos)',
+    brand: 'Apple',
+    vram: 16,
+    vramType: 'Memoria Unificada LPDDR5',
+    tdp: 20,
+    recommendedPsu: 70,
+    platform: 'laptop',
+    isLaptop: true,
+    score1080p: 42,
+    score1440p: 24,
+    score4k: 10,
+    rayTracingScore: 22,
+    releaseYear: 2022,
+    dlssFsrSupport: 'MetalFX Upscaling'
+  },
+  {
+    id: 'gpu-apple-m1-max',
+    name: 'Apple M1 Max GPU (32 Núcleos)',
+    brand: 'Apple',
+    vram: 32,
+    vramType: 'Memoria Unificada LPDDR5',
+    tdp: 30,
+    recommendedPsu: 140,
+    platform: 'laptop',
+    isLaptop: true,
+    score1080p: 72,
+    score1440p: 58,
+    score4k: 38,
+    rayTracingScore: 45,
+    releaseYear: 2021,
+    dlssFsrSupport: 'MetalFX Upscaling'
+  },
+  {
+    id: 'gpu-apple-m1-pro',
+    name: 'Apple M1 Pro GPU (16 Núcleos)',
+    brand: 'Apple',
+    vram: 16,
+    vramType: 'Memoria Unificada LPDDR5',
+    tdp: 30,
+    recommendedPsu: 100,
+    platform: 'laptop',
+    isLaptop: true,
+    score1080p: 54,
+    score1440p: 34,
+    score4k: 18,
+    rayTracingScore: 32,
+    releaseYear: 2021,
+    dlssFsrSupport: 'MetalFX Upscaling'
+  },
+  {
+    id: 'gpu-apple-m1',
+    name: 'Apple M1 GPU (8 Núcleos)',
+    brand: 'Apple',
+    vram: 16,
+    vramType: 'Memoria Unificada LPDDR4X',
+    tdp: 15,
+    recommendedPsu: 60,
+    platform: 'laptop',
+    isLaptop: true,
+    score1080p: 34,
+    score1440p: 18,
+    score4k: 8,
+    rayTracingScore: 18,
+    releaseYear: 2020,
     dlssFsrSupport: 'MetalFX Upscaling'
   },
 
@@ -3946,6 +4214,19 @@ export const INITIAL_GPUS: GPU[] = [
 ];
 
 export const INITIAL_RAMS: RAM[] = [
+  // ─── APPLE UNIFIED MEMORY (MacBook Pro / MacBook Air / Mac Studio) ───
+  { id: 'ram-apple-unified-128', name: 'Apple 128GB Memoria Unificada (LPDDR5X 800GB/s)', brand: 'Apple', type: 'DDR5', capacityGb: 128, speedMhz: 8533, channels: 'quad', casLatency: 28 },
+  { id: 'ram-apple-unified-64', name: 'Apple 64GB Memoria Unificada (LPDDR5X 400GB/s)', brand: 'Apple', type: 'DDR5', capacityGb: 64, speedMhz: 8533, channels: 'quad', casLatency: 28 },
+  { id: 'ram-apple-unified-48', name: 'Apple 48GB Memoria Unificada (LPDDR5X 300GB/s)', brand: 'Apple', type: 'DDR5', capacityGb: 48, speedMhz: 7500, channels: 'dual', casLatency: 28 },
+  { id: 'ram-apple-unified-36', name: 'Apple 36GB Memoria Unificada (LPDDR5X 300GB/s)', brand: 'Apple', type: 'DDR5', capacityGb: 36, speedMhz: 7500, channels: 'dual', casLatency: 28 },
+  { id: 'ram-apple-unified-24', name: 'Apple 24GB Memoria Unificada (LPDDR5X 200GB/s)', brand: 'Apple', type: 'DDR5', capacityGb: 24, speedMhz: 6400, channels: 'dual', casLatency: 30 },
+  { id: 'ram-apple-unified-18', name: 'Apple 18GB Memoria Unificada (LPDDR5X 150GB/s)', brand: 'Apple', type: 'DDR5', capacityGb: 18, speedMhz: 6400, channels: 'dual', casLatency: 30 },
+  { id: 'ram-apple-unified-16', name: 'Apple 16GB Memoria Unificada (LPDDR5X 100GB/s)', brand: 'Apple', type: 'DDR5', capacityGb: 16, speedMhz: 6400, channels: 'dual', casLatency: 30 },
+  { id: 'ram-apple-unified-8', name: 'Apple 8GB Memoria Unificada (LPDDR5X 100GB/s)', brand: 'Apple', type: 'DDR5', capacityGb: 8, speedMhz: 6400, channels: 'dual', casLatency: 30 },
+  // ─── LAPTOP / NOTEBOOK SO-DIMM REFERENCE KITS ───
+  { id: 'ram-laptop-ddr5-32', name: 'Crucial 32GB (2x16GB) DDR5-5600 SO-DIMM Laptop', brand: 'Crucial', type: 'DDR5', capacityGb: 32, speedMhz: 5600, channels: 'dual', casLatency: 46 },
+  { id: 'ram-laptop-ddr5-16', name: 'Crucial 16GB (2x8GB) DDR5-4800 SO-DIMM Laptop', brand: 'Crucial', type: 'DDR5', capacityGb: 16, speedMhz: 4800, channels: 'dual', casLatency: 40 },
+  { id: 'ram-laptop-ddr4-16', name: 'Kingston 16GB (2x8GB) DDR4-3200 SO-DIMM Laptop', brand: 'Kingston', type: 'DDR4', capacityGb: 16, speedMhz: 3200, channels: 'dual', casLatency: 22 },
   // Corsair Flagship DDR5
   { id: 'ram-corsair-dom-ti-64-6600', name: 'Corsair Dominator Titanium RGB 64GB (2x32GB)', brand: 'Corsair', type: 'DDR5', capacityGb: 64, speedMhz: 6600, channels: 'dual', casLatency: 32 },
   { id: 'ram-corsair-dom-ti-96-6800', name: 'Corsair Dominator Titanium RGB 96GB (2x48GB)', brand: 'Corsair', type: 'DDR5', capacityGb: 96, speedMhz: 6800, channels: 'dual', casLatency: 32 },
@@ -3972,12 +4253,18 @@ export const INITIAL_RAMS: RAM[] = [
 ];
 
 export const INITIAL_STORAGES: Storage[] = [
-  { id: 'stor-gen5-2tb', type: 'NVMe Gen5', capacityGb: 2000, readSpeedMb: 12000 },
-  { id: 'stor-gen4-2tb', type: 'NVMe Gen4', capacityGb: 2000, readSpeedMb: 7400 },
-  { id: 'stor-gen4-1tb', type: 'NVMe Gen4', capacityGb: 1000, readSpeedMb: 5000 },
-  { id: 'stor-gen3-1tb', type: 'NVMe Gen3', capacityGb: 1000, readSpeedMb: 3500 },
-  { id: 'stor-sata-1tb', type: 'SATA SSD', capacityGb: 1000, readSpeedMb: 550 },
-  { id: 'stor-hdd-2tb', type: 'HDD', capacityGb: 2000, readSpeedMb: 160 }
+  // ─── APPLE FABRIC NVMe SSD (MacBook Pro / MacBook Air APFS) ───
+  { id: 'stor-apple-nvme-2tb', name: 'Apple Fabric NVMe SSD 2TB (APFS)', brand: 'Apple', type: 'NVMe Gen4', capacityGb: 2000, readSpeedMb: 7400 },
+  { id: 'stor-apple-nvme-1tb', name: 'Apple Fabric NVMe SSD 1TB (APFS)', brand: 'Apple', type: 'NVMe Gen4', capacityGb: 1000, readSpeedMb: 6000 },
+  { id: 'stor-apple-nvme-512', name: 'Apple Fabric NVMe SSD 512GB (APFS)', brand: 'Apple', type: 'NVMe Gen4', capacityGb: 512, readSpeedMb: 5000 },
+  { id: 'stor-apple-nvme-256', name: 'Apple Fabric NVMe SSD 256GB (APFS)', brand: 'Apple', type: 'NVMe Gen3', capacityGb: 256, readSpeedMb: 3000 },
+  // High-End Desktop & Laptop NVMe
+  { id: 'stor-gen5-2tb', name: 'Crucial T700 2TB PCIe Gen5 NVMe M.2 SSD', brand: 'Crucial', type: 'NVMe Gen5', capacityGb: 2000, readSpeedMb: 12000 },
+  { id: 'stor-gen4-2tb', name: 'Samsung 990 PRO 2TB PCIe Gen4 NVMe M.2 SSD', brand: 'Samsung', type: 'NVMe Gen4', capacityGb: 2000, readSpeedMb: 7450 },
+  { id: 'stor-gen4-1tb', name: 'Kingston KC3000 1TB PCIe Gen4 NVMe M.2 SSD', brand: 'Kingston', type: 'NVMe Gen4', capacityGb: 1000, readSpeedMb: 7000 },
+  { id: 'stor-gen3-1tb', name: 'Crucial P3 1TB PCIe Gen3 NVMe M.2 SSD', brand: 'Crucial', type: 'NVMe Gen3', capacityGb: 1000, readSpeedMb: 3500 },
+  { id: 'stor-sata-1tb', name: 'Samsung 870 EVO 1TB SATA SSD', brand: 'Samsung', type: 'SATA SSD', capacityGb: 1000, readSpeedMb: 560 },
+  { id: 'stor-hdd-2tb', name: 'Seagate Barracuda 2TB HDD 7200 RPM', brand: 'Seagate', type: 'HDD', capacityGb: 2000, readSpeedMb: 190 }
 ];
 
 export const INITIAL_PSUS: PSU[] = [
@@ -4488,6 +4775,32 @@ export const INITIAL_PREBUILTS: PrebuiltPC[] = [
 ];
 
 export const INITIAL_MOTHERBOARDS: Motherboard[] = [
+  // ─── APPLE SILICON LOGIC BOARD (MacBook Pro / MacBook Air / Mac Studio) ───
+  {
+    id: 'mb-apple-unified-board',
+    name: 'Apple Logic Board con Arquitectura de Memoria Unificada',
+    brand: 'Apple',
+    socket: 'Apple SoC',
+    chipset: 'Apple Silicon Bus',
+    formFactor: 'Proprietary Apple',
+    memoryType: 'LPDDR5X (Unificada)',
+    maxMemoryGb: 128,
+    memorySlots: 0,
+    wifiSupport: 'WiFi 6E / WiFi 7'
+  },
+  // ─── LAPTOP / NOTEBOOK INTEGRATED OEM MOTHERBOARD ───
+  {
+    id: 'mb-laptop-integrated-oem',
+    name: 'Placa Base Integrada para Laptop / Portátil',
+    brand: 'OEM Laptop',
+    socket: 'FP8 / BGA / Soldered',
+    chipset: 'Mobile Integrated',
+    formFactor: 'Laptop Custom',
+    memoryType: 'DDR5 / LPDDR5X',
+    maxMemoryGb: 64,
+    memorySlots: 2,
+    wifiSupport: 'WiFi 6E'
+  },
   {
     id: 'mb-asus-b650-plus-wifi',
     name: 'ASUS TUF GAMING B650-PLUS WIFI (AM5 DDR5)',

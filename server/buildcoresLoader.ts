@@ -5,6 +5,7 @@ import { CPU, GPU, Motherboard, PSU, RAM, Storage, MobileSoC } from '../src/type
 import {
   INITIAL_CPUS,
   INITIAL_GPUS,
+  INITIAL_MOTHERBOARDS,
   INITIAL_RAMS,
   INITIAL_STORAGES,
   INITIAL_PSUS,
@@ -88,7 +89,11 @@ export function loadBuildCoresData() {
     ...rawGpus.filter(g => !gpuIds.has(g.name.toLowerCase()))
   ];
 
-  buildCoresMotherboards = rawMbs;
+  const mbIds = new Set(INITIAL_MOTHERBOARDS.map(m => m.name.toLowerCase()));
+  buildCoresMotherboards = [
+    ...INITIAL_MOTHERBOARDS,
+    ...rawMbs.filter(m => !mbIds.has(m.name.toLowerCase()))
+  ];
 
   const psuIds = new Set(INITIAL_PSUS.map(p => p.name.toLowerCase()));
   buildCoresPsus = [
