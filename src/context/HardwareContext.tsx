@@ -55,6 +55,7 @@ const DEFAULT_CONFIG: DiagnosisConfig = {
   motherboard: INITIAL_MOTHERBOARDS.find(m => m.id === 'mb-asus-b650-plus-wifi') || INITIAL_MOTHERBOARDS[2] || INITIAL_MOTHERBOARDS[0],
   platform: 'desktop',
   deviceType: 'desktop',
+  ignorePsuForLaptop: false,
   resolution: '1440p',
   monitorCount: 1,
   monitorMode: 'gaming_primary',
@@ -79,7 +80,14 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isSyncingBuildCores, setIsSyncingBuildCores] = useState<boolean>(false);
 
   const [currentConfig, setCurrentConfig] = useState<DiagnosisConfig>(DEFAULT_CONFIG);
-  const [currentResult, setCurrentResult] = useState<BottleneckResult>(() => calculateBottleneck(DEFAULT_CONFIG));
+  const [currentResult, setCurrentResult] = useState<BottleneckResult>(() => {
+    try {
+      return calculateBottleneck(DEFAULT_CONFIG);
+    } catch (e) {
+      console.error('[HardwareContext] Error inicializando resultado:', e);
+      return calculateBottleneck(DEFAULT_CONFIG);
+    }
+  });
 
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
@@ -153,8 +161,12 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Update calculation whenever config changes
   useEffect(() => {
-    const res = calculateBottleneck(currentConfig);
-    setCurrentResult(res);
+    try {
+      const res = calculateBottleneck(currentConfig);
+      setCurrentResult(res);
+    } catch (err) {
+      console.error('[HardwareContext] Error calculando diagnóstico:', err);
+    }
   }, [currentConfig]);
 
   const updateConfig = (patch: Partial<DiagnosisConfig>) => {

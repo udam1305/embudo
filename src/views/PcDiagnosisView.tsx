@@ -52,8 +52,11 @@ export const PcDiagnosisView: React.FC = () => {
   // Platform selection (Desktop PC vs Notebook/Laptop vs All)
   const isCurrentLaptop = Boolean(
     currentConfig.platform === 'laptop' ||
-    currentConfig.cpu.platform === 'laptop' ||
-    currentConfig.cpu.isLaptop
+    currentConfig.deviceType === 'laptop' ||
+    currentConfig.cpu?.platform === 'laptop' ||
+    currentConfig.cpu?.isLaptop ||
+    currentConfig.gpu?.isLaptop ||
+    currentConfig.gpu?.platform === 'laptop'
   );
   const [platformMode, setPlatformMode] = useState<'all' | 'desktop' | 'laptop'>(
     isCurrentLaptop ? 'laptop' : 'desktop'
@@ -67,9 +70,11 @@ export const PcDiagnosisView: React.FC = () => {
       const laptopPsu = psus.find(p => p.id === 'psu-lap-280w-slim') || psus.find(p => p.brand === 'Laptop Original') || psus[0];
       updateConfig({
         platform: 'laptop',
+        deviceType: 'laptop',
         cpu: bestLaptopCpu,
         gpu: bestLaptopGpu,
-        psu: laptopPsu
+        psu: laptopPsu,
+        ignorePsuForLaptop: true
       });
     } else {
       const bestDesktopCpu = cpus.find(c => c.id === 'cpu-7800x3d') || cpus.find(c => c.platform !== 'laptop' && !c.isLaptop) || cpus[0];
@@ -77,9 +82,11 @@ export const PcDiagnosisView: React.FC = () => {
       const desktopPsu = psus.find(p => p.id === 'psu-corsair-rm850x-shift') || psus[0];
       updateConfig({
         platform: 'desktop',
+        deviceType: 'desktop',
         cpu: bestDesktopCpu,
         gpu: bestDesktopGpu,
-        psu: desktopPsu
+        psu: desktopPsu,
+        ignorePsuForLaptop: false
       });
     }
   };
@@ -224,7 +231,7 @@ export const PcDiagnosisView: React.FC = () => {
     if (currentConfig.platform) {
       setPlatformMode(currentConfig.platform);
     }
-    if (currentConfig.cpu.brand === 'Apple') {
+    if (currentConfig.cpu?.brand === 'Apple') {
       setCpuFilterBrand('Apple');
       setGpuFilterBrand('Apple');
     } else {
@@ -245,8 +252,8 @@ export const PcDiagnosisView: React.FC = () => {
     setPsuSearch('');
   }, [
     currentConfig.platform,
-    currentConfig.cpu.id,
-    currentConfig.gpu.id,
+    currentConfig.cpu?.id,
+    currentConfig.gpu?.id,
     currentConfig.motherboard?.id,
     currentConfig.ram?.id,
     currentConfig.storage?.id
@@ -294,8 +301,8 @@ export const PcDiagnosisView: React.FC = () => {
   }, [filteredCpus]);
 
   const currentCpuMeta = useMemo(() => {
-    return getCpuGenerationMeta(currentConfig.cpu);
-  }, [currentConfig.cpu]);
+    return getCpuGenerationMeta(currentConfig.cpu || cpus[0]);
+  }, [currentConfig.cpu, cpus]);
 
   // Available GPU generations based on brand filter
   const availableGpuGenerations = useMemo(() => {
@@ -338,12 +345,15 @@ export const PcDiagnosisView: React.FC = () => {
   }, [filteredGpus]);
 
   const currentGpuMeta = useMemo(() => {
-    return getGpuGenerationMeta(currentConfig.gpu);
-  }, [currentConfig.gpu]);
+    return getGpuGenerationMeta(currentConfig.gpu || gpus[0]);
+  }, [currentConfig.gpu, gpus]);
 
   const handleSaveDiagnosis = () => {
+    const cpuName = currentConfig.cpu?.name || 'CPU';
+    const gpuName = currentConfig.gpu?.name || 'GPU';
+    const resUpper = (currentConfig.resolution || '1440p').toUpperCase();
     saveDiagnosis({
-      title: `${currentConfig.cpu.name} + ${currentConfig.gpu.name} (${currentConfig.resolution.toUpperCase()})`,
+      title: `${cpuName} + ${gpuName} (${resUpper})`,
       config: currentConfig,
       result: currentResult
     });
@@ -602,22 +612,22 @@ export const PcDiagnosisView: React.FC = () => {
                 <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-300 font-bold border border-cyan-500/20 text-[10px]">
                   {currentCpuMeta.shortLabel}
                 </span>
-                {(currentConfig.cpu.isLaptop || currentConfig.cpu.platform === 'laptop' || currentCpuMeta.isLaptop) && (
+                {(currentConfig.cpu?.isLaptop || currentConfig.cpu?.platform === 'laptop' || currentCpuMeta.isLaptop) && (
                   <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 font-bold border border-purple-500/30 text-[10px] flex items-center gap-1">
                     <Laptop className="w-2.5 h-2.5" /> Laptop
                   </span>
                 )}
                 <span className="text-slate-500">•</span>
-                <span className="font-mono text-slate-300">{currentConfig.cpu.socket}</span>
+                <span className="font-mono text-slate-300">{currentConfig.cpu?.socket}</span>
                 <span className="text-slate-500">•</span>
-                <span className="font-mono text-slate-300">PCIe {currentConfig.cpu.pcieGen}.0</span>
+                <span className="font-mono text-slate-300">PCIe {currentConfig.cpu?.pcieGen || 4}.0</span>
                 <span className="text-slate-500">•</span>
-                <span className="font-mono text-slate-300">{currentConfig.cpu.releaseYear}</span>
+                <span className="font-mono text-slate-300">{currentConfig.cpu?.releaseYear || 2024}</span>
               </div>
               <div className="flex items-center gap-3 font-mono">
-                <span>Gaming: <strong className="text-cyan-400">{currentConfig.cpu.gamingScore}/100</strong></span>
-                <span>Boost: <strong className="text-slate-200">{currentConfig.cpu.boostClock} GHz</strong></span>
-                <span>TDP: <strong className="text-orange-400">{currentConfig.cpu.tdp}W</strong></span>
+                <span>Gaming: <strong className="text-cyan-400">{currentConfig.cpu?.gamingScore || 0}/100</strong></span>
+                <span>Boost: <strong className="text-slate-200">{currentConfig.cpu?.boostClock || 0} GHz</strong></span>
+                <span>TDP: <strong className="text-orange-400">{currentConfig.cpu?.tdp || 0}W</strong></span>
               </div>
             </div>
           </div>
@@ -716,23 +726,23 @@ export const PcDiagnosisView: React.FC = () => {
                 <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-300 font-bold border border-blue-500/20 text-[10px]">
                   {currentGpuMeta.shortLabel}
                 </span>
-                {(currentConfig.gpu.isLaptop || currentConfig.gpu.platform === 'laptop' || currentGpuMeta.isLaptop) && (
+                {(currentConfig.gpu?.isLaptop || currentConfig.gpu?.platform === 'laptop' || currentGpuMeta.isLaptop) && (
                   <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 font-bold border border-purple-500/30 text-[10px] flex items-center gap-1">
-                    <Laptop className="w-2.5 h-2.5" /> Laptop TGP {currentConfig.gpu.tdp}W
+                    <Laptop className="w-2.5 h-2.5" /> Laptop TGP {currentConfig.gpu?.tdp || 0}W
                   </span>
                 )}
                 <span className="text-slate-500">•</span>
-                <span className="font-mono text-slate-300">{currentConfig.gpu.vram}GB {currentConfig.gpu.vramType}</span>
+                <span className="font-mono text-slate-300">{currentConfig.gpu?.vram || 0}GB {currentConfig.gpu?.vramType}</span>
                 <span className="text-slate-500">•</span>
-                <span className="font-mono text-slate-300">{currentConfig.gpu.releaseYear}</span>
+                <span className="font-mono text-slate-300">{currentConfig.gpu?.releaseYear || 2024}</span>
                 <span className="text-slate-500">•</span>
-                <span className="text-slate-400 text-[10px] truncate max-w-[150px] sm:max-w-none">{currentConfig.gpu.dlssFsrSupport}</span>
+                <span className="text-slate-400 text-[10px] truncate max-w-[150px] sm:max-w-none">{currentConfig.gpu?.dlssFsrSupport}</span>
               </div>
               <div className="flex items-center gap-3 font-mono">
-                <span>1080p: <strong className="text-emerald-400">{currentConfig.gpu.score1080p}/100</strong></span>
-                <span>1440p: <strong className="text-cyan-400">{currentConfig.gpu.score1440p}/100</strong></span>
-                <span>4K: <strong className="text-blue-400">{currentConfig.gpu.score4k}/100</strong></span>
-                <span>PSU: <strong className="text-orange-400">{currentConfig.gpu.recommendedPsu}W</strong></span>
+                <span>1080p: <strong className="text-emerald-400">{currentConfig.gpu?.score1080p || 0}/100</strong></span>
+                <span>1440p: <strong className="text-cyan-400">{currentConfig.gpu?.score1440p || 0}/100</strong></span>
+                <span>4K: <strong className="text-blue-400">{currentConfig.gpu?.score4k || 0}/100</strong></span>
+                <span>PSU: <strong className="text-orange-400">{currentConfig.gpu?.recommendedPsu || 650}W</strong></span>
               </div>
             </div>
           </div>
@@ -815,13 +825,13 @@ export const PcDiagnosisView: React.FC = () => {
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">
                     {currentConfig.motherboard.socket}
                   </span>
-                  {currentConfig.cpu.socket && currentConfig.motherboard.socket && cleanSocket(currentConfig.cpu.socket) === cleanSocket(currentConfig.motherboard.socket) ? (
+                  {currentConfig.cpu?.socket && currentConfig.motherboard?.socket && cleanSocket(currentConfig.cpu.socket) === cleanSocket(currentConfig.motherboard.socket) ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                       Socket Compatible ✓
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                      Socket Diferente ({currentConfig.cpu.socket} vs {currentConfig.motherboard.socket})
+                      Socket Diferente ({currentConfig.cpu?.socket || 'N/D'} vs {currentConfig.motherboard?.socket || 'N/D'})
                     </span>
                   )}
                   <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
@@ -855,10 +865,10 @@ export const PcDiagnosisView: React.FC = () => {
                   <option value="">Seleccionar Placa Base ({mbFilterBrand === 'All' ? 'Todas' : mbFilterBrand} • {displayMotherboards.length} encontradas)...</option>
                 )}
                 {/* Compatible socket motherboards first */}
-                {currentConfig.cpu.socket && (
+                {currentConfig.cpu?.socket && (
                   <optgroup label={`─── COMPATIBLES CON SOCKET ${currentConfig.cpu.socket.toUpperCase()} ───`}>
                     {displayMotherboards
-                      .filter(m => m.id !== currentConfig.motherboard?.id && cleanSocket(m.socket) === cleanSocket(currentConfig.cpu.socket))
+                      .filter(m => m.id !== currentConfig.motherboard?.id && cleanSocket(m.socket) === cleanSocket(currentConfig.cpu?.socket || ''))
                       .slice(0, 250)
                       .map(m => (
                         <option key={m.id} value={m.id}>
@@ -1082,185 +1092,245 @@ export const PcDiagnosisView: React.FC = () => {
               </select>
             </div>
 
-            {/* Fuente de Poder (PSU) con Filtro de Marcas */}
+            {/* Fuente de Poder (PSU) con Filtro de Marcas y Desactivación para Notebooks */}
             <div className="pt-2 border-t border-slate-800/80">
               <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-400" />
-                  {isCurrentLaptop ? 'ALIMENTACIÓN / CARGADOR LAPTOP' : 'FUENTE DE PODER (PSU)'}
-                </label>
-                {/* Brand Filter Pills for PSU */}
-                <div className="flex items-center gap-1 text-[11px] flex-wrap">
-                  {['All', 'Corsair', 'ASUS', 'Seasonic', 'MSI', 'be quiet!'].map(b => (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <label className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    {isCurrentLaptop ? 'ALIMENTACIÓN / CARGADOR LAPTOP' : 'FUENTE DE PODER (PSU)'}
+                  </label>
+                  {isCurrentLaptop && (
                     <button
-                      key={b}
                       type="button"
-                      onClick={() => setPsuFilterBrand(b)}
-                      className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
-                        psuFilterBrand === b ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30' : 'text-slate-500 hover:text-slate-300'
+                      onClick={() => updateConfig({ ignorePsuForLaptop: !currentConfig.ignorePsuForLaptop })}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                        currentConfig.ignorePsuForLaptop
+                          ? 'bg-purple-500/25 text-purple-300 border-purple-500/50 shadow-sm shadow-purple-950 hover:bg-purple-500/35'
+                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
                       }`}
                     >
-                      {b}
+                      <Zap className={`w-3 h-3 ${currentConfig.ignorePsuForLaptop ? 'text-purple-400 fill-purple-400' : 'text-amber-400'}`} />
+                      {currentConfig.ignorePsuForLaptop ? 'Fuente: Desactivada (Nativa OEM)' : 'Desactivar Fuente en Notebook'}
                     </button>
-                  ))}
-                  {availablePsuBrands.length > 6 && (
-                    <div className="relative">
-                      <label htmlFor="diag-psu-filter-brand" className="sr-only">
-                        Más marcas de fuente de poder
-                      </label>
-                      <select
-                        id="diag-psu-filter-brand"
-                        name="psuFilterBrand"
-                        aria-label="Más marcas de fuente de poder"
-                        value={psuFilterBrand}
-                        onChange={(e) => setPsuFilterBrand(e.target.value)}
-                        className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
+                  )}
+                </div>
+
+                {/* Brand Filter Pills for PSU (only if not deactivated) */}
+                {!currentConfig.ignorePsuForLaptop && (
+                  <div className="flex items-center gap-1 text-[11px] flex-wrap">
+                    {['All', 'Corsair', 'ASUS', 'Seasonic', 'MSI', 'be quiet!'].map(b => (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => setPsuFilterBrand(b)}
+                        className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                          psuFilterBrand === b ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30' : 'text-slate-500 hover:text-slate-300'
+                        }`}
                       >
-                        <option value="All">Más Marcas ({availablePsuBrands.length})...</option>
-                        {availablePsuBrands.filter(b => b !== 'All').map(b => (
-                          <option key={b} value={b}>{b}</option>
-                        ))}
-                      </select>
+                        {b}
+                      </button>
+                    ))}
+                    {availablePsuBrands.length > 6 && (
+                      <div className="relative">
+                        <label htmlFor="diag-psu-filter-brand" className="sr-only">
+                          Más marcas de fuente de poder
+                        </label>
+                        <select
+                          id="diag-psu-filter-brand"
+                          name="psuFilterBrand"
+                          aria-label="Más marcas de fuente de poder"
+                          value={psuFilterBrand}
+                          onChange={(e) => setPsuFilterBrand(e.target.value)}
+                          className="px-1.5 py-0.5 rounded text-[10px] bg-[#1C222D] border border-slate-700 text-slate-300 cursor-pointer"
+                        >
+                          <option value="All">Más Marcas ({availablePsuBrands.length})...</option>
+                          {availablePsuBrands.filter(b => b !== 'All').map(b => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {isCurrentLaptop && currentConfig.ignorePsuForLaptop ? (
+                /* Native OEM Power Active Banner */
+                <div className="p-4 bg-gradient-to-r from-purple-950/40 via-[#1C222D] to-slate-900/60 rounded-xl border border-purple-500/30 space-y-3">
+                  <div className="flex items-start justify-between flex-wrap gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <span className="p-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0 mt-0.5">
+                        <BatteryCharging className="w-4 h-4 text-purple-400" />
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h5 className="text-xs font-bold text-white">
+                            Alimentación Nativa OEM Activa
+                          </h5>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold">
+                            FUENTE DESACTIVADA
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                          La evaluación de fuentes de poder externas está desactivada para esta notebook. El cálculo de cuello de botella asume la entrega de potencia óptima calibrada de fábrica (batería y cargador OEM) sin restricciones ni penalizaciones en el rendimiento de CPU y GPU.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-purple-500/20 text-[11px]">
+                    <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5" /> Rendimiento sin penalización por fuente externa
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => updateConfig({ ignorePsuForLaptop: false })}
+                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold border border-slate-700 transition-colors cursor-pointer"
+                    >
+                      Activar selector de cargador manual
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Buscador de Fuentes de Poder */}
+                  <div className="relative mb-2">
+                    <label htmlFor="diag-psu-search-input" className="sr-only">
+                      Buscar fuente de poder
+                    </label>
+                    <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                    <input
+                      id="diag-psu-search-input"
+                      name="psuSearch"
+                      aria-label="Buscar fuente de poder por modelo o wattage"
+                      type="text"
+                      value={psuSearch}
+                      onChange={(e) => setPsuSearch(e.target.value)}
+                      placeholder={isCurrentLaptop ? "Buscar cargador / adaptador de laptop (ej: 280W, 330W, GaN)..." : "Buscar fuente de poder (ej: RM850x, 750W, Gold, Seasonic, ATX 3.0)..."}
+                      className="w-full pl-9 pr-8 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
+                    />
+                    {psuSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setPsuSearch('')}
+                        className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
+                        aria-label="Limpiar búsqueda de fuente de poder"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {currentConfig.psu && (
+                    <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                      {currentConfig.psu.brand === 'Corsair' && (
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          CORSAIR
+                        </span>
+                      )}
+                      {currentConfig.psu.brand === 'Laptop Original' && (
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                          LAPTOP ADAPTER
+                        </span>
+                      )}
+                      {currentConfig.psu.atx3 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-mono">
+                          ATX 3.1
+                        </span>
+                      )}
+                      <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded ${
+                        currentResult.powerStats?.userPsuEvaluation?.status === 'optimal'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : currentResult.powerStats?.userPsuEvaluation?.status === 'sufficient'
+                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                          : currentResult.powerStats?.userPsuEvaluation?.status === 'tight'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                      }`}>
+                        {currentConfig.psu.wattage}W • {currentConfig.psu.efficiency}
+                      </span>
+                      <span className="text-[10px] text-slate-500 ml-auto font-mono">
+                        {filteredPsus.length} disponibles
+                      </span>
                     </div>
                   )}
-                </div>
-              </div>
-
-              {/* Buscador de Fuentes de Poder */}
-              <div className="relative mb-2">
-                <label htmlFor="diag-psu-search-input" className="sr-only">
-                  Buscar fuente de poder
-                </label>
-                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
-                <input
-                  id="diag-psu-search-input"
-                  name="psuSearch"
-                  aria-label="Buscar fuente de poder por modelo o wattage"
-                  type="text"
-                  value={psuSearch}
-                  onChange={(e) => setPsuSearch(e.target.value)}
-                  placeholder="Buscar fuente de poder (ej: RM850x, 750W, Gold, Seasonic, ATX 3.0)..."
-                  className="w-full pl-9 pr-8 py-2 text-xs bg-[#1C222D] border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
-                />
-                {psuSearch && (
-                  <button
-                    type="button"
-                    onClick={() => setPsuSearch('')}
-                    className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
-                    aria-label="Limpiar búsqueda de fuente de poder"
+                  <label htmlFor="diag-select-psu" className="sr-only">
+                    Seleccionar fuente de poder
+                  </label>
+                  <select
+                    id="diag-select-psu"
+                    name="selectedPsu"
+                    aria-label="Seleccionar fuente de poder"
+                    value={currentConfig.psu?.id || ''}
+                    onChange={(e) => {
+                      const found = psus.find(p => p.id === e.target.value);
+                      if (found) updateConfig({ psu: found });
+                    }}
+                    className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
                   >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {currentConfig.psu && (
-                <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                  {currentConfig.psu.brand === 'Corsair' && (
-                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                      CORSAIR
-                    </span>
-                  )}
-                  {currentConfig.psu.brand === 'Laptop Original' && (
-                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                      LAPTOP ADAPTER
-                    </span>
-                  )}
-                  {currentConfig.psu.atx3 && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-mono">
-                      ATX 3.1
-                    </span>
-                  )}
-                  <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded ${
-                    currentResult.powerStats.userPsuEvaluation?.status === 'optimal'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : currentResult.powerStats.userPsuEvaluation?.status === 'sufficient'
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                      : currentResult.powerStats.userPsuEvaluation?.status === 'tight'
-                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                      : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                  }`}>
-                    {currentConfig.psu.wattage}W • {currentConfig.psu.efficiency}
-                  </span>
-                  <span className="text-[10px] text-slate-500 ml-auto font-mono">
-                    {filteredPsus.length} disponibles
-                  </span>
-                </div>
-              )}
-              <label htmlFor="diag-select-psu" className="sr-only">
-                Seleccionar fuente de poder
-              </label>
-              <select
-                id="diag-select-psu"
-                name="selectedPsu"
-                aria-label="Seleccionar fuente de poder"
-                value={currentConfig.psu?.id || ''}
-                onChange={(e) => {
-                  const found = psus.find(p => p.id === e.target.value);
-                  if (found) updateConfig({ psu: found });
-                }}
-                className="w-full px-4 py-3 bg-[#1C222D] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-cyan-500 cursor-pointer transition-all"
-              >
-                {currentConfig.psu && (
-                  <option value={currentConfig.psu.id}>
-                    ⭐ {currentConfig.psu.name} {currentConfig.psu.brand && !currentConfig.psu.name.includes(currentConfig.psu.brand) ? `(${currentConfig.psu.brand})` : ''} • {currentConfig.psu.wattage}W ({currentConfig.psu.efficiency})
-                  </option>
-                )}
-                {/* Si es laptop, poner los cargadores de laptop arriba */}
-                {displayPsus.some(p => p.brand === 'Laptop Original') && (
-                  <optgroup label="─── CARGADORES / ADAPTADORES DE NOTEBOOK ───">
-                    {displayPsus
-                      .filter(p => p.id !== currentConfig.psu?.id && p.brand === 'Laptop Original')
-                      .map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                  </optgroup>
-                )}
-                <optgroup label={`─── FUENTES DE PODER (${psuFilterBrand === 'All' ? 'TODAS LAS MARCAS' : psuFilterBrand.toUpperCase()}) ───`}>
-                  {displayPsus
-                    .filter(p => p.id !== currentConfig.psu?.id && p.brand !== 'Laptop Original')
-                    .slice(0, 300)
-                    .map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} {p.brand && !p.name.includes(p.brand) ? `(${p.brand})` : ''} • {p.wattage}W ({p.efficiency})
+                    {currentConfig.psu && (
+                      <option value={currentConfig.psu.id}>
+                        ⭐ {currentConfig.psu.name} {currentConfig.psu.brand && !currentConfig.psu.name.includes(currentConfig.psu.brand) ? `(${currentConfig.psu.brand})` : ''} • {currentConfig.psu.wattage}W ({currentConfig.psu.efficiency})
                       </option>
-                    ))}
-                </optgroup>
-              </select>
+                    )}
+                    {/* Si es laptop, poner los cargadores de laptop arriba */}
+                    {displayPsus.some(p => p.brand === 'Laptop Original') && (
+                      <optgroup label="─── CARGADORES / ADAPTADORES DE NOTEBOOK ───">
+                        {displayPsus
+                          .filter(p => p.id !== currentConfig.psu?.id && p.brand === 'Laptop Original')
+                          .map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
+                    <optgroup label={`─── FUENTES DE PODER (${psuFilterBrand === 'All' ? 'TODAS LAS MARCAS' : psuFilterBrand.toUpperCase()}) ───`}>
+                      {displayPsus
+                        .filter(p => p.id !== currentConfig.psu?.id && p.brand !== 'Laptop Original')
+                        .slice(0, 300)
+                        .map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} {p.brand && !p.name.includes(p.brand) ? `(${p.brand})` : ''} • {p.wattage}W ({p.efficiency})
+                          </option>
+                        ))}
+                    </optgroup>
+                  </select>
 
-              {currentConfig.psu && (
-                <div className="mt-2 flex items-center gap-2 flex-wrap text-[11px] text-slate-400 font-mono">
-                  {currentConfig.psu.tier && (
-                    <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-sans font-semibold text-[10px]">
-                      {currentConfig.psu.tier}
-                    </span>
+                  {currentConfig.psu && (
+                    <div className="mt-2 flex items-center gap-2 flex-wrap text-[11px] text-slate-400 font-mono">
+                      {currentConfig.psu.tier && (
+                        <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-sans font-semibold text-[10px]">
+                          {currentConfig.psu.tier}
+                        </span>
+                      )}
+                      {currentConfig.psu.modular && (
+                        <span className="text-slate-400">
+                          • {currentConfig.psu.modular}
+                        </span>
+                      )}
+                      {currentConfig.psu.atx3 && (
+                        <span className="text-cyan-400 font-semibold">
+                          • Cable 12V-2x6 Nativo (RTX 40/50 Ready)
+                        </span>
+                      )}
+                    </div>
                   )}
-                  {currentConfig.psu.modular && (
-                    <span className="text-slate-400">
-                      • {currentConfig.psu.modular}
-                    </span>
+                  {currentResult.powerStats?.userPsuEvaluation && (
+                    <p className={`mt-2 text-[11px] leading-relaxed ${
+                      currentResult.powerStats.userPsuEvaluation.status === 'optimal'
+                        ? 'text-emerald-400'
+                        : currentResult.powerStats.userPsuEvaluation.status === 'sufficient'
+                        ? 'text-cyan-400'
+                        : currentResult.powerStats.userPsuEvaluation.status === 'tight'
+                        ? 'text-amber-400'
+                        : 'text-rose-400'
+                    }`}>
+                      {currentResult.powerStats.userPsuEvaluation.message}
+                    </p>
                   )}
-                  {currentConfig.psu.atx3 && (
-                    <span className="text-cyan-400 font-semibold">
-                      • Cable 12V-2x6 Nativo (RTX 40/50 Ready)
-                    </span>
-                  )}
-                </div>
-              )}
-              {currentResult.powerStats.userPsuEvaluation && (
-                <p className={`mt-2 text-[11px] leading-relaxed ${
-                  currentResult.powerStats.userPsuEvaluation.status === 'optimal'
-                    ? 'text-emerald-400'
-                    : currentResult.powerStats.userPsuEvaluation.status === 'sufficient'
-                    ? 'text-cyan-400'
-                    : currentResult.powerStats.userPsuEvaluation.status === 'tight'
-                    ? 'text-amber-400'
-                    : 'text-rose-400'
-                }`}>
-                  {currentResult.powerStats.userPsuEvaluation.message}
-                </p>
+                </>
               )}
             </div>
           </div>
@@ -1987,10 +2057,10 @@ export const PcDiagnosisView: React.FC = () => {
                 </div>
                 <p className="text-slate-300 leading-relaxed">
                   {currentResult.bottleneckPct < 12
-                    ? `Excelente simetría entre el ${currentConfig.cpu.name} y la ${currentConfig.gpu.name}. Ambos componentes extraen más del 90% de su rendimiento nominal en ${currentConfig.resolution.toUpperCase()} sin generar retrasos en el pipeline gráfico.`
+                    ? `Excelente simetría entre el ${currentConfig.cpu?.name || 'procesador'} y la ${currentConfig.gpu?.name || 'tarjeta gráfica'}. Ambos componentes extraen más del 90% de su rendimiento nominal en ${(currentConfig.resolution || '1440p').toUpperCase()} sin generar retrasos en el pipeline gráfico.`
                     : currentResult.limitingFactor === 'CPU'
-                    ? `El ${currentConfig.cpu.name} limita en un ${currentResult.bottleneckPct}% el potencial de la ${currentConfig.gpu.name}. En juegos competitivos a altos FPS se aconseja subir resolución a 1440p/4K o elevar ajustes de renderizado para trasladar carga a la tarjeta gráfica.`
-                    : `La ${currentConfig.gpu.name} opera al 100% de carga mientras el procesador mantiene margen libre. Este es el estado ideal para juegos de alta fidelidad visual (Ray Tracing y gráficos Ultra).`}
+                    ? `El ${currentConfig.cpu?.name || 'procesador'} limita en un ${currentResult.bottleneckPct}% el potencial de la ${currentConfig.gpu?.name || 'tarjeta gráfica'}. En juegos competitivos a altos FPS se aconseja subir resolución a 1440p/4K o elevar ajustes de renderizado para trasladar carga a la tarjeta gráfica.`
+                    : `La ${currentConfig.gpu?.name || 'tarjeta gráfica'} opera al 100% de carga mientras el procesador mantiene margen libre. Este es el estado ideal para juegos de alta fidelidad visual (Ray Tracing y gráficos Ultra).`}
                 </p>
               </div>
 
@@ -2000,9 +2070,9 @@ export const PcDiagnosisView: React.FC = () => {
                   <Layers className="w-3.5 h-3.5 text-indigo-400" /> Balance de Memoria RAM
                 </div>
                 <p className="text-slate-300 leading-relaxed">
-                  {currentConfig.ram.channels === 'single'
-                    ? `⚠️ Memoria en Single-Channel: Tu configuración sufre una penalización del ${currentResult.technicalDetails.ramSpeedPenaltyPct}% en latencias de acceso. Instalar un segundo módulo de memoria es la mejora más barata y efectiva para estabilizar los 1% Lows.`
-                    : `Configuración en Dual-Channel activa (${currentConfig.ram.capacityGb}GB a ${currentConfig.ram.speedMhz}MHz). Ancho de banda óptimo para alimentar la caché de la CPU sin generar micro-parones en streaming de texturas.`}
+                  {currentConfig.ram?.channels === 'single'
+                    ? `⚠️ Memoria en Single-Channel: Tu configuración sufre una penalización del ${currentResult.technicalDetails?.ramSpeedPenaltyPct || 14}% en latencias de acceso. Instalar un segundo módulo de memoria es la mejora más barata y efectiva para estabilizar los 1% Lows.`
+                    : `Configuración en Dual-Channel activa (${currentConfig.ram?.capacityGb || 32}GB a ${currentConfig.ram?.speedMhz || 6000}MHz). Ancho de banda óptimo para alimentar la caché de la CPU sin generar micro-parones en streaming de texturas.`}
                 </p>
               </div>
 
@@ -2012,10 +2082,12 @@ export const PcDiagnosisView: React.FC = () => {
                   <Zap className="w-3.5 h-3.5 text-amber-400" /> Energía & Transitorios
                 </div>
                 <p className="text-slate-300 leading-relaxed">
-                  Consumo estimado del sistema en ~{currentResult.powerStats.systemEstimatedWatts}W continuos con picos transitorios de hasta {currentResult.powerStats.peakSurgeWatts}W.
-                  {currentResult.powerStats.userPsuEvaluation
+                  Consumo estimado del sistema en ~{currentResult.powerStats?.systemEstimatedWatts || 350}W continuos con picos transitorios de hasta {currentResult.powerStats?.peakSurgeWatts || 420}W.
+                  {currentConfig.ignorePsuForLaptop && isCurrentLaptop
+                    ? ` Alimentación nativa de notebook activa (evaluación de cargador externo omitida sin alterar el rendimiento).`
+                    : currentResult.powerStats?.userPsuEvaluation
                     ? ` Tu fuente elegida de ${currentResult.powerStats.userPsuEvaluation.wattage}W opera al ${currentResult.powerStats.userPsuEvaluation.loadPercentage}% de carga con ${currentResult.powerStats.userPsuEvaluation.headroomWatts >= 0 ? `+${currentResult.powerStats.userPsuEvaluation.headroomWatts}W de reserva` : 'déficit'}.`
-                    : ` Se recomienda fuente de ${currentResult.powerStats.recommendedPsuWatts}W con certificación 80+ Gold.`}
+                    : ` Se recomienda fuente de ${currentResult.powerStats?.recommendedPsuWatts || 750}W con certificación 80+ Gold.`}
                 </p>
               </div>
 
@@ -2027,7 +2099,7 @@ export const PcDiagnosisView: React.FC = () => {
                 <p className="text-slate-300 leading-relaxed">
                   {currentResult.displayAnalysis?.vramAlert
                     ? currentResult.displayAnalysis.vramAlert
-                    : `La demanda de memoria gráfica está bajo control (~${currentResult.displayAnalysis?.vramEstimatedUsageGb || 8}GB de ${currentConfig.gpu.vram}GB). Cable recomendado para evitar flickering: ${currentResult.displayAnalysis?.cableRecommendation || 'DisplayPort 1.4a o HDMI 2.1'}.`}
+                    : `La demanda de memoria gráfica está bajo control (~${currentResult.displayAnalysis?.vramEstimatedUsageGb || 8}GB de ${currentConfig.gpu?.vram || 8}GB). Cable recomendado para evitar flickering: ${currentResult.displayAnalysis?.cableRecommendation || 'DisplayPort 1.4a o HDMI 2.1'}.`}
                 </p>
               </div>
             </div>
@@ -2036,8 +2108,8 @@ export const PcDiagnosisView: React.FC = () => {
           {/* Community Reviews & Builder Feedback for this specific CPU + GPU build */}
           <div className="pt-2">
             <CommunityCommentsSection
-              targetId={`${currentConfig.cpu.name} + ${currentConfig.gpu.name}`}
-              targetName={`${currentConfig.cpu.name} + ${currentConfig.gpu.name}`}
+              targetId={`${currentConfig.cpu?.name || 'CPU'} + ${currentConfig.gpu?.name || 'GPU'}`}
+              targetName={`${currentConfig.cpu?.name || 'CPU'} + ${currentConfig.gpu?.name || 'GPU'}`}
               category="pc"
               title="OPINIONES & COMENTARIOS DE LA COMUNIDAD"
               subtitle="Experiencias reales de ensambladores con esta combinación de procesador y gráfica."

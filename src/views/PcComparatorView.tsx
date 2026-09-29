@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Scale, Cpu, Monitor, Zap, Gauge, Gamepad2, ArrowRight, CheckCircle2, TrendingUp } from 'lucide-react';
 import { useHardware } from '../context/HardwareContext';
 import { calculateBottleneck } from '../lib/calculatorEngine';
-import { DiagnosisConfig } from '../types';
+import { DiagnosisConfig, ResolutionType } from '../types';
 import { groupCpusByGeneration, getCpuGenerationMeta } from '../utils/cpuGenerations';
 import { groupGpusByGeneration, getGpuGenerationMeta } from '../utils/gpuGenerations';
 
@@ -57,7 +57,7 @@ export const PcComparatorView: React.FC = () => {
     os: 'Windows 11'
   }));
 
-  const [resolution, setResolution] = useState<'1080p' | '1440p' | '4k'>('1440p');
+  const [resolution, setResolution] = useState<ResolutionType>('1440p');
 
   const resultA = calculateBottleneck({ ...setupA, resolution });
   const resultB = calculateBottleneck({ ...setupB, resolution });

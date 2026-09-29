@@ -280,23 +280,46 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
   // Multi-monitor overhead watts
   const multiMonitorOverheadWatts = monitorCount > 1 ? (monitorCount - 1) * 15 : 0;
 
+  // Laptop platform check and PSU toggle
+  const isLaptop = config.platform === 'laptop' ||
+                   config.deviceType === 'laptop' ||
+                   Boolean(cpu.platform === 'laptop' || cpu.isLaptop);
+  const psuDisabledForLaptop = Boolean(isLaptop && (config.ignorePsuForLaptop || !config.psu));
+
   // Power & PSU calculations
-  const cpuPeak = Math.round(cpu.tdp * 1.28);
-  const gpuPeak = Math.round(gpu.tdp * 1.25);
-  const sysOtherWatts = 70 + (ram.channels === 'dual' ? 16 : 8) + multiMonitorOverheadWatts;
+  const cpuPeak = Math.round(cpu.tdp * (isLaptop ? 1.15 : 1.28));
+  const gpuPeak = Math.round(gpu.tdp * (isLaptop ? 1.15 : 1.25));
+  const sysOtherWatts = isLaptop
+    ? (20 + multiMonitorOverheadWatts)
+    : (70 + (ram.channels === 'dual' ? 16 : 8) + multiMonitorOverheadWatts);
   const systemEstimatedWatts = cpuPeak + gpuPeak + sysOtherWatts;
-  const peakSurgeWatts = Math.round(systemEstimatedWatts * 1.20);
+  const peakSurgeWatts = Math.round(systemEstimatedWatts * (isLaptop ? 1.10 : 1.20));
   
-  // Recommend PSU with 30-40% headroom for 80+ Gold sweet spot efficiency curve
-  const roundedPsu = Math.ceil((systemEstimatedWatts * 1.35) / 50) * 50;
-  const recommendedPsuWatts = Math.max(gpu.recommendedPsu, roundedPsu);
-  const psuEfficiencyRating = recommendedPsuWatts >= 850 ? '80 PLUS Gold / Platinum (ATX 3.0 / PCIe 5.0 12V-2x6)' : '80 PLUS Gold (750W+)';
+  // Recommend PSU with appropriate headroom
+  const roundedPsu = isLaptop
+    ? Math.ceil((systemEstimatedWatts * 1.20) / 20) * 20
+    : Math.ceil((systemEstimatedWatts * 1.35) / 50) * 50;
+  const recommendedPsuWatts = isLaptop
+    ? Math.max(100, roundedPsu)
+    : Math.max(gpu.recommendedPsu, roundedPsu);
+  const psuEfficiencyRating = isLaptop
+    ? 'Adaptador GaN Slim / Batería OEM Integrada'
+    : (recommendedPsuWatts >= 850 ? '80 PLUS Gold / Platinum (ATX 3.0 / PCIe 5.0 12V-2x6)' : '80 PLUS Gold (750W+)');
 
   // User PSU Evaluation
   const userPsu = config.psu;
   let userPsuEvaluation: BottleneckResult['powerStats']['userPsuEvaluation'] = undefined;
 
-  if (userPsu) {
+  if (psuDisabledForLaptop) {
+    userPsuEvaluation = {
+      wattage: systemEstimatedWatts,
+      efficiency: 'Nativa OEM (Batería / Cargador de Fábrica)',
+      status: 'optimal',
+      message: '⚡ Evaluación de fuente desactivada para Notebook: el cálculo asume la potencia nativa de fábrica sin penalizaciones por cargador externo.',
+      headroomWatts: 0,
+      loadPercentage: 100
+    };
+  } else if (userPsu) {
     const headroomWatts = userPsu.wattage - systemEstimatedWatts;
     const loadPercentage = Math.min(150, Math.round((systemEstimatedWatts / userPsu.wattage) * 100));
     let status: 'optimal' | 'sufficient' | 'tight' | 'insufficient' = 'sufficient';
@@ -304,16 +327,24 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
 
     if (userPsu.wattage < systemEstimatedWatts) {
       status = 'insufficient';
-      message = `⚠️ Tu fuente de ${userPsu.wattage}W es insuficiente. El ensamble demanda ~${systemEstimatedWatts}W continuos (pico de ${peakSurgeWatts}W). Provocará apagados de seguridad (OCP/OPP).`;
+      message = isLaptop
+        ? `⚠️ Tu cargador de ${userPsu.wattage}W es inferior al consumo pico (~${systemEstimatedWatts}W). La notebook descargará batería mientras juegas (Battery Drain).`
+        : `⚠️ Tu fuente de ${userPsu.wattage}W es insuficiente. El ensamble demanda ~${systemEstimatedWatts}W continuos (pico de ${peakSurgeWatts}W). Provocará apagados de seguridad (OCP/OPP).`;
     } else if (userPsu.wattage < peakSurgeWatts) {
       status = 'tight';
-      message = `⚠️ Tu fuente de ${userPsu.wattage}W soporta el uso continuo (${loadPercentage}% de carga), pero está al límite ante picos transitorios de ${peakSurgeWatts}W.`;
+      message = isLaptop
+        ? `⚠️ Tu cargador de ${userPsu.wattage}W cubre el uso continuo (${loadPercentage}% de carga), pero podría limitar el boost máximo en cargas extremas.`
+        : `⚠️ Tu fuente de ${userPsu.wattage}W soporta el uso continuo (${loadPercentage}% de carga), pero está al límite ante picos transitorios de ${peakSurgeWatts}W.`;
     } else if (userPsu.wattage >= recommendedPsuWatts) {
       status = 'optimal';
-      message = `✅ Tu fuente de ${userPsu.wattage}W es óptima (${loadPercentage}% de carga). Permite operar en la curva ideal de eficiencia y absorbe picos transitorios con total holgura.`;
+      message = isLaptop
+        ? `✅ Cargador de ${userPsu.wattage}W óptimo (${loadPercentage}% de carga). Permite el máximo TGP de la GPU y recarga simultánea de batería.`
+        : `✅ Tu fuente de ${userPsu.wattage}W es óptima (${loadPercentage}% de carga). Permite operar en la curva ideal de eficiencia y absorbe picos transitorios con total holgura.`;
     } else {
       status = 'sufficient';
-      message = `✔️ Tu fuente de ${userPsu.wattage}W es suficiente para el consumo continuo (~${systemEstimatedWatts}W) con un margen adecuado.`;
+      message = isLaptop
+        ? `✔️ Cargador de ${userPsu.wattage}W suficiente para mantener el rendimiento continuo de la notebook (~${systemEstimatedWatts}W).`
+        : `✔️ Tu fuente de ${userPsu.wattage}W es suficiente para el consumo continuo (~${systemEstimatedWatts}W) con un margen adecuado.`;
     }
 
     userPsuEvaluation = {
@@ -470,21 +501,31 @@ export function calculateBottleneck(config: DiagnosisConfig): BottleneckResult {
     });
   }
 
-  if (userPsu && userPsu.wattage < peakSurgeWatts) {
-    upgradeRecommendations.unshift({
-      priority: 1,
-      componentType: 'Fuente',
-      suggestedItem: `Fuente Corsair RM${recommendedPsuWatts}x SHIFT 80+ Gold (ATX 3.1)`,
-      gainPercentage: 0,
-      reason: `Tu fuente actual (${userPsu.wattage}W) está por debajo del pico transitorio de ${peakSurgeWatts}W. Requiere actualización prioritaria para evitar reinicios o apagados súbitos.`
-    });
-  } else if (!userPsu && systemEstimatedWatts > gpu.recommendedPsu * 0.85) {
+  if (!isLaptop && !psuDisabledForLaptop) {
+    if (userPsu && userPsu.wattage < peakSurgeWatts) {
+      upgradeRecommendations.unshift({
+        priority: 1,
+        componentType: 'Fuente',
+        suggestedItem: `Fuente Corsair RM${recommendedPsuWatts}x SHIFT 80+ Gold (ATX 3.1)`,
+        gainPercentage: 0,
+        reason: `Tu fuente actual (${userPsu.wattage}W) está por debajo del pico transitorio de ${peakSurgeWatts}W. Requiere actualización prioritaria para evitar reinicios o apagados súbitos.`
+      });
+    } else if (!userPsu && systemEstimatedWatts > gpu.recommendedPsu * 0.85) {
+      upgradeRecommendations.push({
+        priority: 5,
+        componentType: 'Fuente',
+        suggestedItem: `Fuente Corsair RM${recommendedPsuWatts}x SHIFT 80+ Gold Modular`,
+        gainPercentage: 5,
+        reason: 'Garantiza estabilidad ante picos transitorios (transient spikes) y protege tus componentes.'
+      });
+    }
+  } else if (isLaptop && !psuDisabledForLaptop && userPsu && userPsu.wattage < systemEstimatedWatts) {
     upgradeRecommendations.push({
-      priority: 5,
+      priority: 2,
       componentType: 'Fuente',
-      suggestedItem: `Fuente Corsair RM${recommendedPsuWatts}x SHIFT 80+ Gold Modular`,
-      gainPercentage: 5,
-      reason: 'Garantiza estabilidad ante picos transitorios (transient spikes) y protege tus componentes.'
+      suggestedItem: `Cargador Original de Notebook ${recommendedPsuWatts}W GaN`,
+      gainPercentage: 8,
+      reason: `Tu cargador actual de ${userPsu.wattage}W provoca drenado de batería mientras juegas. Uno de ${recommendedPsuWatts}W mantiene el boost máximo de la GPU.`
     });
   }
 

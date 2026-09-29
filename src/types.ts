@@ -121,6 +121,7 @@ export interface DiagnosisConfig {
   deviceType?: DeviceType; // 'desktop' | 'laptop'
   platform?: 'desktop' | 'laptop';
   laptopChargerWatts?: number; // e.g. 65, 100, 140, 180, 230, 280, 330
+  ignorePsuForLaptop?: boolean; // When true, power supply / charger evaluation is disabled for notebook
   // Multi-Monitor & Scaling Configuration
   monitorCount?: number; // 1, 2, 3, 4
   monitorMode?: 'gaming_primary' | 'surround_span'; // primary game vs spanned surround
