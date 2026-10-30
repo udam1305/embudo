@@ -156,6 +156,24 @@ export const KNOWN_GPU_GENERATIONS: GpuGenerationMeta[] = [
     shortLabel: 'Radeon RX 400 (Polaris)',
     architecture: 'Polaris',
     order: 12
+  },
+
+  // --- Intel Arc (Chronological recent to older) ---
+  {
+    id: 'intel-arc-battlemage',
+    brand: 'Intel',
+    label: 'Intel Arc Battlemage B-Series (Xe2-HPG • 2024 - 2025)',
+    shortLabel: 'Arc Battlemage (Xe2)',
+    architecture: 'Xe2-HPG Battlemage',
+    order: 13
+  },
+  {
+    id: 'intel-arc-alchemist',
+    brand: 'Intel',
+    label: 'Intel Arc Alchemist A-Series (Xe-HPG • 2022 - 2023)',
+    shortLabel: 'Arc Alchemist (Xe)',
+    architecture: 'Xe-HPG Alchemist',
+    order: 14
   }
 ];
 
@@ -236,6 +254,15 @@ export function getGpuGenerationMeta(gpu: GPU): GpuGenerationMeta {
   if (brand === 'Intel') {
     if (name.includes('140V') || name.includes('130V') || name.includes('IRIS')) {
       return KNOWN_GPU_GENERATIONS.find(g => g.id === 'intel-mobile-gpu')!;
+    }
+  }
+
+  if (brand === 'Intel') {
+    if (name.includes('B580') || name.includes('B570') || id.includes('b580') || id.includes('b570') || name.includes('BATTLEMAGE')) {
+      return KNOWN_GPU_GENERATIONS[12]; // intel-arc-battlemage
+    }
+    if (name.includes('A770') || name.includes('A750') || name.includes('A580') || name.includes('A380') || id.includes('a770') || id.includes('a750') || id.includes('a580') || id.includes('a380') || name.includes('ALCHEMIST')) {
+      return KNOWN_GPU_GENERATIONS[13]; // intel-arc-alchemist
     }
   }
 

@@ -4210,6 +4210,85 @@ export const INITIAL_GPUS: GPU[] = [
     rayTracingScore: 3,
     releaseYear: 2016,
     dlssFsrSupport: 'FSR 1.0'
+  },
+
+  // =========================================================================
+  // INTEL ARC: BATTLEMAGE & ALCHEMIST (2022 - 2025)
+  // =========================================================================
+  {
+    id: 'gpu-arc-b580',
+    name: 'Intel Arc B580 12GB (Battlemage)',
+    brand: 'Intel',
+    vram: 12,
+    vramType: 'GDDR6',
+    tdp: 190,
+    recommendedPsu: 550,
+    score1080p: 72,
+    score1440p: 60,
+    score4k: 41,
+    rayTracingScore: 50,
+    releaseYear: 2024,
+    dlssFsrSupport: 'XeSS 1.3 / FSR 3.1'
+  },
+  {
+    id: 'gpu-arc-b570',
+    name: 'Intel Arc B570 10GB (Battlemage)',
+    brand: 'Intel',
+    vram: 10,
+    vramType: 'GDDR6',
+    tdp: 150,
+    recommendedPsu: 500,
+    score1080p: 65,
+    score1440p: 52,
+    score4k: 34,
+    rayTracingScore: 44,
+    releaseYear: 2025,
+    dlssFsrSupport: 'XeSS 1.3 / FSR 3.1'
+  },
+  {
+    id: 'gpu-arc-a770-16',
+    name: 'Intel Arc A770 16GB (Alchemist)',
+    brand: 'Intel',
+    vram: 16,
+    vramType: 'GDDR6',
+    tdp: 225,
+    recommendedPsu: 550,
+    score1080p: 66,
+    score1440p: 55,
+    score4k: 38,
+    rayTracingScore: 46,
+    releaseYear: 2022,
+    dlssFsrSupport: 'XeSS 1.3 / FSR 3.1'
+  },
+  {
+    id: 'gpu-arc-a750',
+    name: 'Intel Arc A750 8GB (Alchemist)',
+    brand: 'Intel',
+    vram: 8,
+    vramType: 'GDDR6',
+    tdp: 225,
+    recommendedPsu: 550,
+    score1080p: 62,
+    score1440p: 50,
+    score4k: 33,
+    rayTracingScore: 40,
+    releaseYear: 2022,
+    dlssFsrSupport: 'XeSS 1.3 / FSR 3.1'
+  },
+  {
+    id: 'gpu-arc-a580',
+    name: 'Intel Arc A580 8GB (Alchemist)',
+    brand: 'Intel',
+    vram: 8,
+    vramType: 'GDDR6',
+    tdp: 185,
+    recommendedPsu: 500,
+    score1080p: 55,
+    score1440p: 42,
+    score4k: 25,
+    rayTracingScore: 32,
+    releaseYear: 2023,
+    dlssFsrSupport: 'XeSS 1.3 / FSR 3.1'
   }
 ];
 

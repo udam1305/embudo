@@ -13,12 +13,10 @@ import {
   X,
   Sparkles,
   Search,
-  CheckCircle2,
-  Scan
+  CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useHardware } from '../context/HardwareContext';
-import { DeviceScannerModal } from './DeviceScannerModal';
 
 export type ActiveTab = 'landing' | 'pc-diag' | 'calculators' | 'comparator' | 'smartphones' | 'catalog' | 'account' | 'admin' | 'support';
 
@@ -33,17 +31,22 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [scannerOpen, setScannerOpen] = useState(false);
 
-  const navItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'pc-diag', label: 'Diagnóstico PC & Laptop', icon: Cpu },
-    { id: 'calculators', label: 'Calculadoras', icon: Calculator },
-    { id: 'comparator', label: 'Comparador PC', icon: Scale },
-    { id: 'smartphones', label: 'Smartphones', icon: Smartphone },
-    { id: 'catalog', label: 'Catálogo', icon: Layers },
-    { id: 'account', label: user ? 'Mi Perfil' : 'Cuenta', icon: User },
-    ...(user && isAdmin ? [{ id: 'admin' as ActiveTab, label: 'Admin', icon: Shield }] : [])
+  const allNavItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }>; requiresAuth: boolean }[] = [
+    { id: 'pc-diag', label: 'Diagnóstico PC', icon: Cpu, requiresAuth: false },
+    { id: 'calculators', label: 'Calculadoras', icon: Calculator, requiresAuth: true },
+    { id: 'comparator', label: 'Comparador PC', icon: Scale, requiresAuth: true },
+    { id: 'smartphones', label: 'Smartphones', icon: Smartphone, requiresAuth: true },
+    { id: 'catalog', label: 'Catálogo', icon: Layers, requiresAuth: true },
+    { id: 'account', label: 'Cuenta', icon: User, requiresAuth: true },
+    { id: 'admin', label: 'Admin', icon: Shield, requiresAuth: true }
   ];
+
+  // When user is not logged in (isLoggedIn === false), only show public items ('Diagnóstico PC')
+  const visibleNavItems = allNavItems.filter(item => {
+    if (!user && item.requiresAuth) return false;
+    return true;
+  });
 
   const handleNavClick = (id: ActiveTab) => {
     setActiveTab(id);
@@ -66,7 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           {/* Brand Logo */}
           <button
             id="nav-brand-logo-btn"
-            onClick={() => handleNavClick('landing')}
+            onClick={() => handleNavClick(user ? 'landing' : 'pc-diag')}
             className="flex items-center gap-3 group text-left cursor-pointer focus:outline-none"
           >
             <div className="w-8 h-8 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center transform rotate-12 shadow-md shadow-cyan-500/20 group-hover:rotate-0 transition-transform duration-200">
@@ -82,9 +85,9 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             </div>
           </button>
 
-          {/* Desktop Nav Links */}
+          {/* Desktop Nav Links - Only Diagnóstico PC when not logged in, all options when logged in */}
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-400">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
                 <button
@@ -107,19 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </nav>
 
           {/* Right Action Icons & Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Auto-Scan Device Button */}
-            <button
-              id="nav-scan-device-btn"
-              onClick={() => setScannerOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-gradient-to-r from-cyan-600/30 to-blue-600/30 hover:from-cyan-600/50 hover:to-blue-600/50 text-cyan-300 border border-cyan-500/40 rounded-full transition-all cursor-pointer uppercase tracking-wider shadow-sm group"
-              title="Escanear y auto-detectar componentes de este dispositivo"
-            >
-              <Scan className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-90 transition-transform duration-300 animate-pulse" />
-              <span className="hidden sm:inline">Escanear PC/Móvil</span>
-              <span className="sm:hidden">Escanear</span>
-            </button>
-
+          <div className="flex items-center gap-3">
             {/* Quick Search Button */}
             <button
               id="nav-quick-search-btn"
@@ -145,14 +136,16 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
-            {/* Historial Button */}
-            <button
-              id="nav-history-btn"
-              onClick={() => handleNavClick('account')}
-              className="hidden sm:block px-4 py-1.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition-all cursor-pointer uppercase tracking-wider"
-            >
-              HISTORIAL
-            </button>
+            {/* Historial Button - Visible only when logged in */}
+            {user && (
+              <button
+                id="nav-history-btn"
+                onClick={() => handleNavClick('account')}
+                className="hidden sm:block px-4 py-1.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition-all cursor-pointer uppercase tracking-wider"
+              >
+                HISTORIAL
+              </button>
+            )}
 
             {/* Login / User Status */}
             <button
@@ -223,7 +216,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-slate-800 bg-[#0F1218] px-4 pt-2 pb-6 space-y-1">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
@@ -268,13 +261,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </div>
         </div>
       )}
-
-      {/* Device Hardware Scanner Modal */}
-      <DeviceScannerModal
-        isOpen={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onApplyAndNavigate={handleNavClick}
-      />
     </header>
   );
 };

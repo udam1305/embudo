@@ -1,12 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { CPU, GPU, RAM, Storage, PSU, Motherboard, MobileSoC, PrebuiltPC, DiagnosisConfig, BottleneckResult } from '../types';
+import { CPU, GPU, RAM, Storage, PSU, MobileSoC, PrebuiltPC, DiagnosisConfig, BottleneckResult } from '../types';
 import {
   INITIAL_CPUS,
   INITIAL_GPUS,
   INITIAL_RAMS,
   INITIAL_STORAGES,
   INITIAL_PSUS,
-  INITIAL_MOTHERBOARDS,
   INITIAL_SOCS,
   INITIAL_PREBUILTS
 } from '../data/initialData';
@@ -18,14 +17,10 @@ interface HardwareContextType {
   rams: RAM[];
   storages: Storage[];
   psus: PSU[];
-  motherboards: Motherboard[];
   socs: MobileSoC[];
   prebuilts: PrebuiltPC[];
   currentConfig: DiagnosisConfig;
   currentResult: BottleneckResult;
-  buildcoresMetadata: any;
-  isSyncingBuildCores: boolean;
-  syncBuildCores: () => Promise<{ success: boolean; message: string }>;
   updateConfig: (patch: Partial<DiagnosisConfig>) => void;
   recentSearches: string[];
   addRecentSearch: (query: string) => void;
@@ -39,8 +34,6 @@ interface HardwareContextType {
   deleteSoc: (id: string) => Promise<boolean>;
   addOrUpdatePsu: (psu: PSU) => Promise<boolean>;
   deletePsu: (id: string) => Promise<boolean>;
-  addOrUpdateMotherboard: (mb: Motherboard) => Promise<boolean>;
-  deleteMotherboard: (id: string) => Promise<boolean>;
 }
 
 const HardwareContext = createContext<HardwareContextType | undefined>(undefined);
@@ -52,10 +45,6 @@ const DEFAULT_CONFIG: DiagnosisConfig = {
   ram: INITIAL_RAMS.find(r => r.id === 'ram-corsair-veng-rgb-32-6000') || INITIAL_RAMS[0], // Corsair Vengeance RGB 32GB 6000MHz
   storage: INITIAL_STORAGES[1], // 2TB NVMe Gen4
   psu: INITIAL_PSUS.find(p => p.id === 'psu-corsair-rm850x-shift') || INITIAL_PSUS[6] || INITIAL_PSUS[0], // Corsair RM850x SHIFT ATX 3.1
-  motherboard: INITIAL_MOTHERBOARDS.find(m => m.id === 'mb-asus-b650-plus-wifi') || INITIAL_MOTHERBOARDS[2] || INITIAL_MOTHERBOARDS[0],
-  platform: 'desktop',
-  deviceType: 'desktop',
-  ignorePsuForLaptop: false,
   resolution: '1440p',
   monitorCount: 1,
   monitorMode: 'gaming_primary',
@@ -70,24 +59,14 @@ const DEFAULT_CONFIG: DiagnosisConfig = {
 export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cpus, setCpus] = useState<CPU[]>(INITIAL_CPUS);
   const [gpus, setGpus] = useState<GPU[]>(INITIAL_GPUS);
-  const [rams, setRams] = useState<RAM[]>(INITIAL_RAMS);
-  const [storages, setStorages] = useState<Storage[]>(INITIAL_STORAGES);
+  const [rams] = useState<RAM[]>(INITIAL_RAMS);
+  const [storages] = useState<Storage[]>(INITIAL_STORAGES);
   const [psus, setPsus] = useState<PSU[]>(INITIAL_PSUS);
-  const [motherboards, setMotherboards] = useState<Motherboard[]>(INITIAL_MOTHERBOARDS);
   const [socs, setSocs] = useState<MobileSoC[]>(INITIAL_SOCS);
   const [prebuilts, setPrebuilts] = useState<PrebuiltPC[]>(INITIAL_PREBUILTS);
-  const [buildcoresMetadata, setBuildcoresMetadata] = useState<any>(null);
-  const [isSyncingBuildCores, setIsSyncingBuildCores] = useState<boolean>(false);
 
   const [currentConfig, setCurrentConfig] = useState<DiagnosisConfig>(DEFAULT_CONFIG);
-  const [currentResult, setCurrentResult] = useState<BottleneckResult>(() => {
-    try {
-      return calculateBottleneck(DEFAULT_CONFIG);
-    } catch (e) {
-      console.error('[HardwareContext] Error inicializando resultado:', e);
-      return calculateBottleneck(DEFAULT_CONFIG);
-    }
-  });
+  const [currentResult, setCurrentResult] = useState<BottleneckResult>(() => calculateBottleneck(DEFAULT_CONFIG));
 
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
@@ -101,57 +80,16 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Load from API on mount
   const reloadComponents = async () => {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      const res = await fetch('/api/components/all', { signal: controller.signal });
-      clearTimeout(timeoutId);
+      const res = await fetch('/api/components/all');
       if (res.ok) {
         const data = await res.json();
-        if (data.cpus && data.cpus.length > 0) setCpus(data.cpus);
-        if (data.gpus && data.gpus.length > 0) setGpus(data.gpus);
-        if (data.motherboards && data.motherboards.length > 0) setMotherboards(data.motherboards);
-        if (data.psus && data.psus.length > 0) setPsus(data.psus);
-        if (data.rams && data.rams.length > 0) setRams(data.rams);
-        if (data.storages && data.storages.length > 0) setStorages(data.storages);
-        if (data.socs && data.socs.length > 0) setSocs(data.socs);
-        if (data.metadata) setBuildcoresMetadata(data.metadata);
+        if (data.cpus) setCpus(data.cpus);
+        if (data.gpus) setGpus(data.gpus);
+        if (data.socs) setSocs(data.socs);
+        if (data.psus) setPsus(data.psus);
       }
-    } catch (err: any) {
-      console.warn('[HardwareContext] Aviso al cargar componentes completos, reintentando:', err?.message);
-      // Retry once without abort controller in case of transient latency
-      try {
-        const retryRes = await fetch('/api/components/all');
-        if (retryRes.ok) {
-          const data = await retryRes.json();
-          if (data.cpus && data.cpus.length > 0) setCpus(data.cpus);
-          if (data.gpus && data.gpus.length > 0) setGpus(data.gpus);
-          if (data.motherboards && data.motherboards.length > 0) setMotherboards(data.motherboards);
-          if (data.psus && data.psus.length > 0) setPsus(data.psus);
-          if (data.rams && data.rams.length > 0) setRams(data.rams);
-          if (data.storages && data.storages.length > 0) setStorages(data.storages);
-          if (data.socs && data.socs.length > 0) setSocs(data.socs);
-          if (data.metadata) setBuildcoresMetadata(data.metadata);
-        }
-      } catch (retryErr) {
-        console.warn('[HardwareContext] Catálogo local inicial activo como fallback:', retryErr);
-      }
-    }
-  };
-
-  const syncBuildCores = async (): Promise<{ success: boolean; message: string }> => {
-    setIsSyncingBuildCores(true);
-    try {
-      const res = await fetch('/api/buildcores/sync', { method: 'POST' });
-      const data = await res.json();
-      await reloadComponents();
-      setIsSyncingBuildCores(false);
-      return {
-        success: data.success ?? true,
-        message: data.message || 'Componentes sincronizados exitosamente desde buildcores-open-db'
-      };
-    } catch (err: any) {
-      setIsSyncingBuildCores(false);
-      return { success: false, message: err?.message || 'Error al conectar con BuildCores' };
+    } catch (e) {
+      console.warn('Using local seed hardware catalog:', e);
     }
   };
 
@@ -161,12 +99,8 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Update calculation whenever config changes
   useEffect(() => {
-    try {
-      const res = calculateBottleneck(currentConfig);
-      setCurrentResult(res);
-    } catch (err) {
-      console.error('[HardwareContext] Error calculando diagnóstico:', err);
-    }
+    const res = calculateBottleneck(currentConfig);
+    setCurrentResult(res);
   }, [currentConfig]);
 
   const updateConfig = (patch: Partial<DiagnosisConfig>) => {
@@ -336,16 +270,6 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return true;
   };
 
-  const addOrUpdateMotherboard = async (mb: Motherboard): Promise<boolean> => {
-    setMotherboards(prev => [mb, ...prev.filter(m => m.id !== mb.id)]);
-    return true;
-  };
-
-  const deleteMotherboard = async (id: string): Promise<boolean> => {
-    setMotherboards(prev => prev.filter(m => m.id !== id));
-    return true;
-  };
-
   return (
     <HardwareContext.Provider
       value={{
@@ -354,14 +278,10 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         rams,
         storages,
         psus,
-        motherboards,
         socs,
         prebuilts,
         currentConfig,
         currentResult,
-        buildcoresMetadata,
-        isSyncingBuildCores,
-        syncBuildCores,
         updateConfig,
         recentSearches,
         addRecentSearch,
@@ -374,9 +294,7 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addOrUpdateSoc,
         deleteSoc,
         addOrUpdatePsu,
-        deletePsu,
-        addOrUpdateMotherboard,
-        deleteMotherboard
+        deletePsu
       }}
     >
       {children}
