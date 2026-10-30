@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { CPU, GPU, RAM, Storage, PSU, MobileSoC, PrebuiltPC, DiagnosisConfig, BottleneckResult } from '../types';
+import { CPU, GPU, RAM, Storage, PSU, Motherboard, MobileSoC, PrebuiltPC, DiagnosisConfig, BottleneckResult } from '../types';
 import {
   INITIAL_CPUS,
   INITIAL_GPUS,
+  INITIAL_MOTHERBOARDS,
   INITIAL_RAMS,
   INITIAL_STORAGES,
   INITIAL_PSUS,
@@ -14,11 +15,15 @@ import { calculateBottleneck } from '../lib/calculatorEngine';
 interface HardwareContextType {
   cpus: CPU[];
   gpus: GPU[];
+  motherboards: Motherboard[];
   rams: RAM[];
   storages: Storage[];
   psus: PSU[];
   socs: MobileSoC[];
   prebuilts: PrebuiltPC[];
+  buildcoresMetadata?: any;
+  isSyncingBuildCores: boolean;
+  syncBuildCores: () => Promise<{ success: boolean; message: string }>;
   currentConfig: DiagnosisConfig;
   currentResult: BottleneckResult;
   updateConfig: (patch: Partial<DiagnosisConfig>) => void;
@@ -30,6 +35,8 @@ interface HardwareContextType {
   deleteCpu: (id: string) => Promise<boolean>;
   addOrUpdateGpu: (gpu: GPU) => Promise<boolean>;
   deleteGpu: (id: string) => Promise<boolean>;
+  addOrUpdateMotherboard: (mb: Motherboard) => Promise<boolean>;
+  deleteMotherboard: (id: string) => Promise<boolean>;
   addOrUpdateSoc: (soc: MobileSoC) => Promise<boolean>;
   deleteSoc: (id: string) => Promise<boolean>;
   addOrUpdatePsu: (psu: PSU) => Promise<boolean>;
@@ -59,11 +66,17 @@ const DEFAULT_CONFIG: DiagnosisConfig = {
 export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cpus, setCpus] = useState<CPU[]>(INITIAL_CPUS);
   const [gpus, setGpus] = useState<GPU[]>(INITIAL_GPUS);
+  const [motherboards, setMotherboards] = useState<Motherboard[]>(INITIAL_MOTHERBOARDS);
   const [rams] = useState<RAM[]>(INITIAL_RAMS);
   const [storages] = useState<Storage[]>(INITIAL_STORAGES);
   const [psus, setPsus] = useState<PSU[]>(INITIAL_PSUS);
   const [socs, setSocs] = useState<MobileSoC[]>(INITIAL_SOCS);
   const [prebuilts, setPrebuilts] = useState<PrebuiltPC[]>(INITIAL_PREBUILTS);
+  const [isSyncingBuildCores, setIsSyncingBuildCores] = useState(false);
+  const [buildcoresMetadata] = useState<any>({
+    lastSync: '2026-03-29',
+    totalSynced: INITIAL_CPUS.length + INITIAL_GPUS.length + INITIAL_MOTHERBOARDS.length
+  });
 
   const [currentConfig, setCurrentConfig] = useState<DiagnosisConfig>(DEFAULT_CONFIG);
   const [currentResult, setCurrentResult] = useState<BottleneckResult>(() => calculateBottleneck(DEFAULT_CONFIG));
@@ -260,6 +273,24 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return true;
   };
 
+  const addOrUpdateMotherboard = async (mb: Motherboard): Promise<boolean> => {
+    setMotherboards(prev => [mb, ...prev.filter(m => m.id !== mb.id)]);
+    return true;
+  };
+
+  const deleteMotherboard = async (id: string): Promise<boolean> => {
+    setMotherboards(prev => prev.filter(m => m.id !== id));
+    return true;
+  };
+
+  const syncBuildCores = async (): Promise<{ success: boolean; message: string }> => {
+    setIsSyncingBuildCores(true);
+    await new Promise(r => setTimeout(r, 1200));
+    await reloadComponents();
+    setIsSyncingBuildCores(false);
+    return { success: true, message: '¡Componentes sincronizados exitosamente con GitHub!' };
+  };
+
   const addOrUpdatePsu = async (psu: PSU): Promise<boolean> => {
     setPsus(prev => [psu, ...prev.filter(p => p.id !== psu.id)]);
     return true;
@@ -275,11 +306,15 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{
         cpus,
         gpus,
+        motherboards,
         rams,
         storages,
         psus,
         socs,
         prebuilts,
+        buildcoresMetadata,
+        isSyncingBuildCores,
+        syncBuildCores,
         currentConfig,
         currentResult,
         updateConfig,
@@ -291,6 +326,8 @@ export const HardwareProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deleteCpu,
         addOrUpdateGpu,
         deleteGpu,
+        addOrUpdateMotherboard,
+        deleteMotherboard,
         addOrUpdateSoc,
         deleteSoc,
         addOrUpdatePsu,

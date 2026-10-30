@@ -26,6 +26,7 @@ import {
   Server
 } from 'lucide-react';
 import { useHardware } from '../context/HardwareContext';
+import { INITIAL_MOTHERBOARDS } from '../data/initialData';
 import {
   scanClientDevice,
   parseSystemInfoText,
@@ -45,7 +46,7 @@ export const DeviceScannerModal: React.FC<DeviceScannerModalProps> = ({
   onClose,
   onApplyAndNavigate
 }) => {
-  const { cpus, gpus, motherboards, rams, storages, psus, socs, updateConfig } = useHardware();
+  const { cpus, gpus, rams, storages, psus, socs, updateConfig } = useHardware();
 
   const [activeTab, setActiveTab] = useState<'auto' | 'manual'>('auto');
   const [manualOs, setManualOs] = useState<'mac' | 'windows'>('mac');
@@ -82,7 +83,7 @@ export const DeviceScannerModal: React.FC<DeviceScannerModalProps> = ({
       const res = await scanClientDevice(
         cpus,
         gpus,
-        motherboards,
+        INITIAL_MOTHERBOARDS,
         rams,
         storages,
         psus,
@@ -146,7 +147,7 @@ export const DeviceScannerModal: React.FC<DeviceScannerModalProps> = ({
 
   const handleManualParse = () => {
     if (!pastedText.trim()) return;
-    const parsed = parseSystemInfoText(pastedText, cpus, gpus, motherboards, rams, storages);
+    const parsed = parseSystemInfoText(pastedText, cpus, gpus, INITIAL_MOTHERBOARDS, rams, storages);
     setManualParsed(parsed);
   };
 
@@ -164,7 +165,7 @@ export const DeviceScannerModal: React.FC<DeviceScannerModalProps> = ({
       deviceType: isLap ? 'laptop' : 'desktop',
       cpu: manualParsed.matchedCpu || cpus[0],
       gpu: matchedG,
-      motherboard: manualParsed.matchedMotherboard || motherboards[0],
+      motherboard: manualParsed.matchedMotherboard || INITIAL_MOTHERBOARDS[0],
       ram: manualParsed.matchedRam || rams[0],
       storage: manualParsed.matchedStorage || storages[0],
       psu: matchedPsu,

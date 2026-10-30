@@ -23,12 +23,14 @@ import {
   ArrowLeft,
   RotateCcw,
   Gamepad2,
-  CheckCircle
+  CheckCircle,
+  Scan
 } from 'lucide-react';
 import { useHardware } from '../context/HardwareContext';
 import { useAuth } from '../context/AuthContext';
 import { CPU, GPU, RAM, Storage, ResolutionType, WorkloadType, UpscalingTechnology, UpscalingMode } from '../types';
 import { ExportCardModal } from '../components/ExportCardModal';
+import { LiveAutoScannerModal } from '../components/LiveAutoScannerModal';
 import { groupCpusByGeneration, getCpuGenerationMeta, KNOWN_CPU_GENERATIONS } from '../utils/cpuGenerations';
 import { groupGpusByGeneration, getGpuGenerationMeta, KNOWN_GPU_GENERATIONS } from '../utils/gpuGenerations';
 import confetti from 'canvas-confetti';
@@ -43,6 +45,7 @@ export const PcDiagnosisView: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
 
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showLiveScanner, setShowLiveScanner] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // Search and filter states
@@ -230,7 +233,16 @@ export const PcDiagnosisView: React.FC = () => {
         </div>
 
         {/* Top actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          <button
+            id="diag-live-scan-btn"
+            onClick={() => setShowLiveScanner(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500/20 via-cyan-500/20 to-blue-500/20 hover:from-teal-500/30 hover:to-blue-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition-all cursor-pointer shadow-lg shadow-cyan-500/10 group"
+          >
+            <Zap className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform animate-pulse" />
+            <span>Escanear mi PC actual</span>
+          </button>
+
           <button
             id="diag-save-btn"
             onClick={handleSaveDiagnosis}
@@ -355,6 +367,38 @@ export const PcDiagnosisView: React.FC = () => {
               </div>
             </div>
 
+            {/* Quick Auto-Scanner Banner for Step 1 (Zero-Install / In-Browser) */}
+            <div className="bg-gradient-to-r from-[#141E2E] via-[#101926] to-[#0E1520] border border-cyan-500/40 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl shadow-cyan-500/5">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300 shrink-0 mt-0.5 shadow-sm">
+                  <Scan className="w-5 h-5 text-cyan-400 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                      <span>Auto-Escáner en Vivo</span>
+                      <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full font-mono font-bold">
+                        ZERO-INSTALL
+                      </span>
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    ¿No recuerdas tus componentes? El navegador detectará tu tarjeta gráfica vía WebGL, hilos de CPU, RAM y pantalla automáticamente en 2 segundos.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                id="step1-live-scan-btn"
+                onClick={() => setShowLiveScanner(true)}
+                className="shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-600 hover:from-teal-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-cyan-500/20 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Zap className="w-4 h-4 fill-slate-950" />
+                <span>Escanear mi PC actual</span>
+              </button>
+            </div>
+
             {/* 1.1 Brand Selection (AMD / Intel / All) */}
             <div>
               <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2.5">
@@ -458,7 +502,7 @@ export const PcDiagnosisView: React.FC = () => {
                   <option value="All">⚡ Todas las Generaciones de {cpuFilterBrand === 'All' ? 'CPUs' : cpuFilterBrand}</option>
                   {availableCpuGenerations.map(g => (
                     <option key={g.id} value={g.id}>
-                      {g.label}
+                      {g.name}
                     </option>
                   ))}
                 </select>
@@ -530,7 +574,7 @@ export const PcDiagnosisView: React.FC = () => {
                       </span>
                     </div>
                     <div className="text-xs text-slate-400 mt-0.5">
-                      Arquitectura {currentCpuMeta.architecture} • Socket {currentConfig.cpu.socket} • Año {currentConfig.cpu.releaseYear}
+                      Generación {currentCpuMeta.name} • Socket {currentConfig.cpu.socket} • Año {currentConfig.cpu.releaseYear}
                     </div>
                   </div>
                 </div>
@@ -1670,6 +1714,16 @@ export const PcDiagnosisView: React.FC = () => {
           onClose={() => setShowExportModal(false)}
         />
       )}
+
+      {/* Live In-Browser Auto-Scanner Modal */}
+      <LiveAutoScannerModal
+        isOpen={showLiveScanner}
+        onClose={() => setShowLiveScanner(false)}
+        onScanCompleted={(targetStep = 4) => {
+          setCurrentStep(targetStep as WizardStep);
+          window.scrollTo({ top: 120, behavior: 'smooth' });
+        }}
+      />
     </div>
   );
 };

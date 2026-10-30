@@ -684,18 +684,42 @@ function matchGpu(
 
   const pool = candidates.length > 0 ? candidates : gpus;
 
-  const rtxMatch = clean.match(/(?:rtx|gtx)\s*([0-9]{4}(?:\s*(?:ti|super))?)/i);
-  const rxMatch = clean.match(/rx\s*([0-9]{4}(?:\s*(?:xtx|xt|gre))?)/i);
+  const rtxMatch = clean.match(/(?:rtx|gtx)\s*([0-9]{3,4}(?:\s*(?:ti|super))?)/i);
+  const rxMatch = clean.match(/rx\s*([0-9]{3,4}(?:\s*(?:xtx|xt|gre))?)/i);
   const arcMatch = clean.match(/arc\s*(a[0-9]{3}|b[0-9]{3})/i);
 
   if (rtxMatch) {
-    const modelNum = rtxMatch[1].replace(/\s+/g, '').toLowerCase();
+    const rawMatch = rtxMatch[1].toLowerCase();
+    const hasTi = rawMatch.includes('ti');
+    const hasSuper = rawMatch.includes('super');
+    const modelNum = rawMatch.replace(/\s+/g, '');
+
+    // Prioritize non-Ti/non-Super if not in detection string
+    if (!hasTi && !hasSuper) {
+      const exactNonTi = pool.find((g) => {
+        const cleanName = g.name.toLowerCase().replace(/\s+/g, '');
+        return cleanName.includes(modelNum) && !cleanName.includes('ti') && !cleanName.includes('super');
+      });
+      if (exactNonTi) return exactNonTi;
+    }
+
     const found = pool.find((g) => g.name.toLowerCase().replace(/\s+/g, '').includes(modelNum));
     if (found) return found;
   }
 
   if (rxMatch) {
-    const modelNum = rxMatch[1].replace(/\s+/g, '').toLowerCase();
+    const rawMatch = rxMatch[1].toLowerCase();
+    const hasXt = rawMatch.includes('xt');
+    const modelNum = rawMatch.replace(/\s+/g, '');
+
+    if (!hasXt) {
+      const exactNonXt = pool.find((g) => {
+        const cleanName = g.name.toLowerCase().replace(/\s+/g, '');
+        return cleanName.includes(modelNum) && !cleanName.includes('xt') && !cleanName.includes('gre');
+      });
+      if (exactNonXt) return exactNonXt;
+    }
+
     const found = pool.find((g) => g.name.toLowerCase().replace(/\s+/g, '').includes(modelNum));
     if (found) return found;
   }
@@ -719,6 +743,27 @@ function matchGpu(
     return pool.find((g) => g.id === 'gpu-lap-4080') || pool.find((g) => g.name.includes('4070')) || pool[0];
   }
   return pool.find((g) => g.id === 'gpu-5070ti') || pool.find((g) => g.name.includes('4070')) || pool[0];
+}
+
+/**
+ * Returns candidate CPUs matching a given logical thread count from browser concurrency
+ */
+export function getCandidateCpusForThreads(threads: number, cpus: CPU[], isLaptop = false): CPU[] {
+  const pool = isLaptop
+    ? cpus.filter((c) => c.isLaptop || c.platform === 'laptop')
+    : cpus.filter((c) => !c.isLaptop && c.platform !== 'laptop');
+
+  const activePool = pool.length > 0 ? pool : cpus;
+
+  // Exact thread count matches
+  const exact = activePool.filter((c) => c.threads === threads);
+  if (exact.length >= 2) {
+    return exact.sort((a, b) => b.gamingScore - a.gamingScore).slice(0, 8);
+  }
+
+  // Close matches (within 2-4 threads)
+  const close = activePool.filter((c) => Math.abs(c.threads - threads) <= 4);
+  return close.sort((a, b) => b.gamingScore - a.gamingScore).slice(0, 8);
 }
 
 /**

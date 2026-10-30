@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { ActiveTab } from '../components/Navbar';
 import { useHardware } from '../context/HardwareContext';
-import { DeviceScannerModal } from '../components/DeviceScannerModal';
+import { LiveAutoScannerModal } from '../components/LiveAutoScannerModal';
 
 interface HomeLandingViewProps {
   setActiveTab: (tab: ActiveTab) => void;
@@ -294,10 +294,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ setActiveTab }
       </section>
 
       {/* Device Hardware Scanner Modal */}
-      <DeviceScannerModal
+      <LiveAutoScannerModal
         isOpen={scannerOpen}
         onClose={() => setScannerOpen(false)}
-        onApplyAndNavigate={setActiveTab}
+        onScanCompleted={() => setActiveTab('pc-diag')}
       />
     </div>
   );
