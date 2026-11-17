@@ -1,0 +1,26 @@
+{
+  "id": "diagnostico-pc/asistente-paso-a-paso",
+  "title": "Asistente Secuencial (4 Pasos)",
+  "description": "La vista de Medición de Cuello de Botella & Rendimiento organiza la selección de componentes en un flujo guiado de 4 pasos con barra de progreso superior (Paso X de 4) y validación previa antes de avanzar.",
+  "source": "@site/docs/diagnostico-pc/asistente-paso-a-paso.md",
+  "sourceDirName": "diagnostico-pc",
+  "slug": "/diagnostico-pc/asistente-paso-a-paso",
+  "permalink": "/docs/guia/diagnostico-pc/asistente-paso-a-paso",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Diagnóstico PC",
+    "permalink": "/docs/guia/category/diagnóstico-pc"
+  },
+  "next": {
+    "title": "Auto-Escáner en Vivo (Zero-Install)",
+    "permalink": "/docs/guia/diagnostico-pc/auto-escaner-vivo"
+  }
+}

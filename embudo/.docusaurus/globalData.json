@@ -1,0 +1,63 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/docs/guia",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/docs/guia",
+          "mainDocId": "intro",
+          "docs": [
+            {
+              "id": "api/endpoints",
+              "path": "/docs/guia/api/endpoints",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "diagnostico-pc/asistente-paso-a-paso",
+              "path": "/docs/guia/diagnostico-pc/asistente-paso-a-paso",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "diagnostico-pc/auto-escaner-vivo",
+              "path": "/docs/guia/diagnostico-pc/auto-escaner-vivo",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "diagnostico-pc/calculo-cuello-botella",
+              "path": "/docs/guia/diagnostico-pc/calculo-cuello-botella",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "intro",
+              "path": "/docs/guia/intro",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "smartphones/diagnostico-soc",
+              "path": "/docs/guia/smartphones/diagnostico-soc",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/diagnóstico-pc",
+              "path": "/docs/guia/category/diagnóstico-pc",
+              "sidebar": "tutorialSidebar"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "tutorialSidebar": {
+              "link": {
+                "path": "/docs/guia/intro",
+                "label": "intro"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

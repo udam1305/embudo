@@ -246,6 +246,36 @@ async function startServer() {
     res.json({ success: true, message: 'Fuente eliminada' });
   });
 
+  // --- DOCUSAURUS DOCUMENTATION SITE (/docs) ---
+  const docsBuildPath = path.join(process.cwd(), 'embudo', 'build');
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const [pathname, query] = req.originalUrl.split('?');
+    if (pathname === '/docs') {
+      return res.redirect(301, query ? `/docs/?${query}` : '/docs/');
+    }
+    next();
+  });
+  app.use('/docs', (req: Request, res: Response, next: NextFunction) => {
+    if (fs.existsSync(docsBuildPath)) {
+      return express.static(docsBuildPath)(req, res, next);
+    }
+    next();
+  });
+  app.get('/docs/*', (req: Request, res: Response, next: NextFunction) => {
+    if (!fs.existsSync(docsBuildPath)) {
+      return next();
+    }
+    const notFoundPage = path.join(docsBuildPath, '404.html');
+    const indexPage = path.join(docsBuildPath, 'index.html');
+    if (fs.existsSync(notFoundPage)) {
+      return res.status(404).sendFile(notFoundPage);
+    }
+    if (fs.existsSync(indexPage)) {
+      return res.sendFile(indexPage);
+    }
+    next();
+  });
+
   // --- VITE MIDDLEWARE SETUP ---
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -256,7 +286,7 @@ async function startServer() {
 
     // Explicitly handle all non-API GET requests to serve transformed index.html
     app.use('*', async (req: Request, res: Response, next: NextFunction) => {
-      if (req.originalUrl.startsWith('/api')) {
+      if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/docs')) {
         return next();
       }
       try {

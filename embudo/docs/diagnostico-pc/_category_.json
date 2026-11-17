@@ -1,0 +1,8 @@
+{
+  "label": "Diagnóstico PC",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Guías detalladas del asistente secuencial, detección WebGL/WebGPU y métricas de cuello de botella."
+  }
+}

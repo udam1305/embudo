@@ -1,0 +1,26 @@
+{
+  "id": "diagnostico-pc/calculo-cuello-botella",
+  "title": "Metodología de Cuello de Botella",
+  "description": "El motor calculatorEngine.ts evalúa el equilibrio dinámico entre el rendimiento mononúcleo/multinúcleo del procesador y la potencia rasterizada + VRAM de la tarjeta gráfica según la resolución elegida.",
+  "source": "@site/docs/diagnostico-pc/calculo-cuello-botella.md",
+  "sourceDirName": "diagnostico-pc",
+  "slug": "/diagnostico-pc/calculo-cuello-botella",
+  "permalink": "/docs/guia/diagnostico-pc/calculo-cuello-botella",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Auto-Escáner en Vivo (Zero-Install)",
+    "permalink": "/docs/guia/diagnostico-pc/auto-escaner-vivo"
+  },
+  "next": {
+    "title": "Diagnóstico Móvil (SoCs & Thermal Throttling)",
+    "permalink": "/docs/guia/smartphones/diagnostico-soc"
+  }
+}

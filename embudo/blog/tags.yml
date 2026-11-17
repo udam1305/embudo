@@ -1,0 +1,14 @@
+lanzamiento:
+  label: Lanzamiento
+  permalink: /lanzamiento
+  description: Novedades y versiones de EMBUDO.tech
+
+webgl:
+  label: WebGL & WebGPU
+  permalink: /webgl
+  description: Detección de hardware Zero-Install en el navegador
+
+hardware:
+  label: Hardware
+  permalink: /hardware
+  description: Análisis de CPUs, GPUs y cuellos de botella

@@ -1,0 +1,146 @@
+{
+  "/docs/blog-377": {
+    "__comp": "a6aa9e1f",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "d1d523d0"
+      }
+    ],
+    "__props": "7da13d82"
+  },
+  "/docs/blog/archive-5ff": {
+    "__comp": "9e4087bc",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "__props": "5be1457f"
+  },
+  "/docs/blog/authors-164": {
+    "__comp": "621db11d",
+    "__context": {
+      "data": {
+        "blogMetadata": "acecf23e"
+      },
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "__props": "4795aa0f"
+  },
+  "/docs/blog/lanzamiento-embudo-v2-6-d8f": {
+    "__comp": "ccc49370",
+    "__context": {
+      "data": {
+        "blogMetadata": "acecf23e"
+      },
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "content": "96a67291"
+  },
+  "/docs/blog/tags-a37": {
+    "__comp": "01a85c17",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "__props": "a2b2b438"
+  },
+  "/docs/blog/tags/hardware-a49": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "d1d523d0"
+      }
+    ],
+    "__props": "db4369d3"
+  },
+  "/docs/blog/tags/lanzamiento-98f": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "d1d523d0"
+      }
+    ],
+    "__props": "bd5a2620"
+  },
+  "/docs/blog/tags/webgl-ff9": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "d1d523d0"
+      }
+    ],
+    "__props": "e9500b22"
+  },
+  "/docs/markdown-page-1e2": {
+    "__comp": "1f391b9e",
+    "__context": {
+      "plugin": "a7456010"
+    },
+    "content": "4c678320"
+  },
+  "/docs/guia-2ae": {
+    "__comp": "5e95c892",
+    "__context": {
+      "plugin": "aba21aa0"
+    }
+  },
+  "/docs/guia-c10": {
+    "__comp": "a7bd4aaa",
+    "__props": "4a4aa8c2"
+  },
+  "/docs/guia-fe4": {
+    "__comp": "a94703ab"
+  },
+  "/docs/guia/api/endpoints-206": {
+    "__comp": "17896441",
+    "content": "d04023df"
+  },
+  "/docs/guia/category/diagnóstico-pc-ffc": {
+    "__comp": "14eb3368",
+    "__props": "47a71b19"
+  },
+  "/docs/guia/diagnostico-pc/asistente-paso-a-paso-58e": {
+    "__comp": "17896441",
+    "content": "03f6adb1"
+  },
+  "/docs/guia/diagnostico-pc/auto-escaner-vivo-6c7": {
+    "__comp": "17896441",
+    "content": "e5379a92"
+  },
+  "/docs/guia/diagnostico-pc/calculo-cuello-botella-57c": {
+    "__comp": "17896441",
+    "content": "ff3d297a"
+  },
+  "/docs/guia/intro-dc8": {
+    "__comp": "17896441",
+    "content": "0e384e19"
+  },
+  "/docs/guia/smartphones/diagnostico-soc-bcb": {
+    "__comp": "17896441",
+    "content": "206dfc0f"
+  },
+  "/docs/-2a6": {
+    "__comp": "1df93b7f",
+    "__context": {
+      "plugin": "a7456010"
+    },
+    "config": "5e9f5e1a"
+  }
+}

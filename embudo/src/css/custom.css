@@ -1,0 +1,207 @@
+/**
+ * EMBUDO.tech Docusaurus Custom Theme
+ * Mirrors the dark/light slate & neon cyan/blue design system of EMBUDO.tech
+ */
+
+:root {
+  --ifm-color-primary: #0891b2;
+  --ifm-color-primary-dark: #0e7490;
+  --ifm-color-primary-darker: #155e75;
+  --ifm-color-primary-darkest: #164e63;
+  --ifm-color-primary-light: #06b6d4;
+  --ifm-color-primary-lighter: #22d3ee;
+  --ifm-color-primary-lightest: #67e8f9;
+
+  --ifm-background-color: #f8fafc;
+  --ifm-background-surface-color: #ffffff;
+  --ifm-navbar-background-color: rgba(255, 255, 255, 0.92);
+  --ifm-footer-background-color: #080a0e;
+
+  --ifm-font-family-base: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --ifm-heading-font-weight: 800;
+  --ifm-code-font-size: 92%;
+  --ifm-global-radius: 0.75rem;
+
+  --embudo-border: #e2e8f0;
+  --embudo-card-bg: #ffffff;
+  --embudo-card-hover-border: rgba(6, 182, 212, 0.45);
+  --embudo-text-muted: #475569;
+  --docusaurus-highlighted-code-line-bg: rgba(6, 182, 212, 0.12);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #22d3ee;
+  --ifm-color-primary-dark: #06b6d4;
+  --ifm-color-primary-darker: #0891b2;
+  --ifm-color-primary-darkest: #0e7490;
+  --ifm-color-primary-light: #67e8f9;
+  --ifm-color-primary-lighter: #a5f3fc;
+  --ifm-color-primary-lightest: #cffafe;
+
+  --ifm-background-color: #0a0c10;
+  --ifm-background-surface-color: #151921;
+  --ifm-navbar-background-color: rgba(15, 18, 24, 0.92);
+  --ifm-footer-background-color: #080a0e;
+  --ifm-toc-border-color: #1e2533;
+  --ifm-hr-border-color: #1e2533;
+  --ifm-color-emphasis-200: #1e2533;
+  --ifm-color-emphasis-300: #293347;
+  --ifm-menu-color: #94a3b8;
+  --ifm-menu-color-active: #22d3ee;
+  --ifm-font-color-base: #f1f5f9;
+  --ifm-heading-color: #ffffff;
+
+  --embudo-border: #1e2533;
+  --embudo-card-bg: #151921;
+  --embudo-card-hover-border: rgba(34, 211, 238, 0.45);
+  --embudo-text-muted: #94a3b8;
+  --docusaurus-highlighted-code-line-bg: rgba(34, 211, 238, 0.15);
+}
+
+html,
+body {
+  font-family: var(--ifm-font-family-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Navbar matching EMBUDO.tech header */
+.navbar {
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--embudo-border);
+  box-shadow: none;
+}
+
+.navbar__title {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.navbar__link {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.embudo-nav-cta {
+  background: linear-gradient(90deg, #0891b2, #2563eb);
+  color: #ffffff !important;
+  border-radius: 9999px;
+  padding: 0.42rem 1rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em;
+  box-shadow: 0 8px 20px rgba(6, 182, 212, 0.25);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.embudo-nav-cta:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(6, 182, 212, 0.35);
+}
+
+/* Sidebar sleek styling */
+.menu__link {
+  border-radius: 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.menu__link--active:not(.menu__link--sublist) {
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.28);
+}
+
+/* Cards, tables & code blocks in dark mode */
+[data-theme='dark'] .card,
+[data-theme='dark'] .pagination-nav__link {
+  background-color: #151921;
+  border: 1px solid #1e2533;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+[data-theme='dark'] .pagination-nav__link:hover,
+[data-theme='dark'] .card:hover {
+  border-color: rgba(34, 211, 238, 0.5);
+}
+
+[data-theme='dark'] table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #151921;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid #1e2533;
+}
+
+[data-theme='dark'] table thead tr {
+  background-color: #1c222d;
+  border-bottom: 1px solid #1e2533;
+}
+
+[data-theme='dark'] table tr:nth-child(2n) {
+  background-color: rgba(28, 34, 45, 0.45);
+}
+
+[data-theme='dark'] th,
+[data-theme='dark'] td {
+  border-color: #1e2533;
+}
+
+[data-theme='dark'] .theme-code-block {
+  border: 1px solid #1e2533;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* Footer matching #080A0E */
+.footer--dark {
+  --ifm-footer-background-color: #080a0e;
+  border-top: 1px solid #1e2533;
+}
+
+.footer__title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+}
+
+.footer__link-item {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+}
+
+.footer__link-item:hover {
+  color: #22d3ee;
+  text-decoration: none;
+}
+
+.footer__copyright {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #1e2533;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ifm-background-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e2533;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #06b6d4;
+}

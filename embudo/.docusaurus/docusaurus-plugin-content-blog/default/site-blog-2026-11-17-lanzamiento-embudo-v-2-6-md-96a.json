@@ -1,0 +1,51 @@
+{
+  "permalink": "/docs/blog/lanzamiento-embudo-v2-6",
+  "source": "@site/blog/2026-11-17-lanzamiento-embudo-v2-6.md",
+  "title": "EMBUDO.tech v2.6 — Asistente de 4 Pasos y Auto-Escáner en Vivo",
+  "description": "Presentamos la nueva arquitectura EMBUDO.tech v2.6 junto con su portal oficial de documentación construido en Docusaurus con la identidad visual oscura y acentos neón cian de la plataforma.",
+  "date": "2026-11-17T00:00:00.000Z",
+  "tags": [
+    {
+      "inline": false,
+      "label": "Lanzamiento",
+      "permalink": "/docs/blog/tags/lanzamiento",
+      "description": "Novedades y versiones de EMBUDO.tech"
+    },
+    {
+      "inline": false,
+      "label": "WebGL & WebGPU",
+      "permalink": "/docs/blog/tags/webgl",
+      "description": "Detección de hardware Zero-Install en el navegador"
+    },
+    {
+      "inline": false,
+      "label": "Hardware",
+      "permalink": "/docs/blog/tags/hardware",
+      "description": "Análisis de CPUs, GPUs y cuellos de botella"
+    }
+  ],
+  "readingTime": 0.58,
+  "hasTruncateMarker": true,
+  "authors": [
+    {
+      "name": "Equipo EMBUDO.tech",
+      "title": "Ingeniería de Hardware & Telemetría",
+      "url": "/",
+      "key": "embudo",
+      "page": null
+    }
+  ],
+  "frontMatter": {
+    "slug": "lanzamiento-embudo-v2-6",
+    "title": "EMBUDO.tech v2.6 — Asistente de 4 Pasos y Auto-Escáner en Vivo",
+    "authors": [
+      "embudo"
+    ],
+    "tags": [
+      "lanzamiento",
+      "webgl",
+      "hardware"
+    ]
+  },
+  "unlisted": false
+}

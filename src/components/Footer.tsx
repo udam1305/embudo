@@ -171,6 +171,15 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab }) => {
                 </button>
               </li>
               <li>
+                <a
+                  id="footer-link-docs"
+                  href="/docs/"
+                  className="hover:text-cyan-400 transition-colors cursor-pointer"
+                >
+                  Documentación Técnica (Docs)
+                </a>
+              </li>
+              <li>
                 <button
                   id="footer-link-contact"
                   onClick={() => setActiveTab('support')}

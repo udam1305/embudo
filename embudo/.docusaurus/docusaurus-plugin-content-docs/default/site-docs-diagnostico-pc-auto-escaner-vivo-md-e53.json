@@ -1,0 +1,26 @@
+{
+  "id": "diagnostico-pc/auto-escaner-vivo",
+  "title": "Auto-Escáner en Vivo (Zero-Install)",
+  "description": "El Auto-Escáner en Vivo permite detectar el hardware del equipo directamente desde el navegador al pulsar Escanear mi PC actual, sin descargar ejecutables ni ejecutar comandos en PowerShell o Terminal.",
+  "source": "@site/docs/diagnostico-pc/auto-escaner-vivo.md",
+  "sourceDirName": "diagnostico-pc",
+  "slug": "/diagnostico-pc/auto-escaner-vivo",
+  "permalink": "/docs/guia/diagnostico-pc/auto-escaner-vivo",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Asistente Secuencial (4 Pasos)",
+    "permalink": "/docs/guia/diagnostico-pc/asistente-paso-a-paso"
+  },
+  "next": {
+    "title": "Metodología de Cuello de Botella",
+    "permalink": "/docs/guia/diagnostico-pc/calculo-cuello-botella"
+  }
+}

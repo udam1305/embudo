@@ -1,0 +1,22 @@
+{
+  "id": "intro",
+  "title": "Introducción a EMBUDO.tech v2.6",
+  "description": "EMBUDO.tech es una plataforma integral de diagnóstico de hardware diseñada para calcular con precisión el cuello de botella (bottleneck) entre CPU y GPU, estimar el rendimiento en FPS, el consumo eléctrico real en Watts y evaluar SoCs móviles.",
+  "source": "@site/docs/intro.md",
+  "sourceDirName": ".",
+  "slug": "/intro",
+  "permalink": "/docs/guia/intro",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "next": {
+    "title": "Diagnóstico PC",
+    "permalink": "/docs/guia/category/diagnóstico-pc"
+  }
+}
