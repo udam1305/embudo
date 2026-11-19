@@ -247,7 +247,14 @@ async function startServer() {
   });
 
   // --- DOCUSAURUS DOCUMENTATION SITE (/docs) ---
-  const docsBuildPath = path.join(process.cwd(), 'embudo', 'build');
+  const resolveDocsBuildPath = () => {
+    const distDocs = path.join(process.cwd(), 'dist', 'docs');
+    if (fs.existsSync(distDocs)) return distDocs;
+    const embudoBuild = path.join(process.cwd(), 'embudo', 'build');
+    if (fs.existsSync(embudoBuild)) return embudoBuild;
+    return null;
+  };
+
   app.use((req: Request, res: Response, next: NextFunction) => {
     const [pathname, query] = req.originalUrl.split('?');
     if (pathname === '/docs') {
@@ -256,13 +263,15 @@ async function startServer() {
     next();
   });
   app.use('/docs', (req: Request, res: Response, next: NextFunction) => {
-    if (fs.existsSync(docsBuildPath)) {
+    const docsBuildPath = resolveDocsBuildPath();
+    if (docsBuildPath) {
       return express.static(docsBuildPath)(req, res, next);
     }
     next();
   });
-  app.get('/docs/*', (req: Request, res: Response, next: NextFunction) => {
-    if (!fs.existsSync(docsBuildPath)) {
+  app.get('/docs/*', (_req: Request, res: Response, next: NextFunction) => {
+    const docsBuildPath = resolveDocsBuildPath();
+    if (!docsBuildPath) {
       return next();
     }
     const notFoundPage = path.join(docsBuildPath, '404.html');
