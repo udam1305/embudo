@@ -339,7 +339,7 @@ export async function scanClientDevice(
   detectionDetails.push(`Sistema Operativo: ${os} ${isIPhoneDevice ? '(Apple iOS Mobile)' : ''}`);
   detectionDetails.push(`Hilos de CPU detectados: ${logicalThreads} núcleos`);
 
-  // 6. Battery probe
+  // 6. Battery probe (W3C Battery Status API)
   let hasBattery = false;
   let batteryInfo: DeviceScanResult['batteryInfo'] = undefined;
 
@@ -347,12 +347,25 @@ export async function scanClientDevice(
     if (typeof (navigator as any).getBattery === 'function') {
       const b = await (navigator as any).getBattery();
       if (b) {
-        hasBattery = true;
-        batteryInfo = {
-          level: Math.round(b.level * 100),
-          charging: b.charging
-        };
-        detectionDetails.push(`Batería detectada: ${batteryInfo.level}% (${b.charging ? 'cargando' : 'batería'})`);
+        // W3C Specification standard:
+        // When a host device is connected to fixed AC wall power with NO physical battery (desktop PC),
+        // browsers MUST return charging=true, chargingTime=0, dischargingTime=Infinity, level=1.0.
+        const isAcWallPoweredDesktopDummy =
+          b.charging === true &&
+          b.chargingTime === 0 &&
+          (b.dischargingTime === Infinity || b.dischargingTime === 0) &&
+          (b.level === 1 || b.level === 1.0);
+
+        if (!isAcWallPoweredDesktopDummy) {
+          hasBattery = true;
+          batteryInfo = {
+            level: Math.round(b.level * 100),
+            charging: b.charging
+          };
+          detectionDetails.push(`Batería física detectada: ${batteryInfo.level}% (${b.charging ? 'cargando' : 'batería'})`);
+        } else {
+          detectionDetails.push(`Alimentación de red eléctrica de CA fija (Sin batería física • PC de Sobremesa)`);
+        }
       }
     }
   } catch {}
@@ -461,6 +474,18 @@ export async function scanClientDevice(
   // 8. Device Type Determination
   const isMacBook = os === 'macOS' && !isSmartphoneDevice && (macModelName?.includes('MacBook') || hasBattery || pixelRatio === 2);
 
+  const isLaptopGpuIndicator = /laptop|mobile|max-q|notebook/i.test(rawGpuRenderer) ||
+    /laptop|mobile|max-q|notebook/i.test(webGpuAdapterName || '');
+
+  // Discrete desktop GPUs (RTX 3060, RTX 4070, RX 6700 XT, Arc A770, GTX 1660, etc.)
+  const isExplicitDesktopGpu = !isLaptopGpuIndicator && (
+    /(?:rtx|gtx)\s*[0-9]{4}/i.test(rawGpuRenderer) ||
+    /rx\s*[0-9]{4}/i.test(rawGpuRenderer) ||
+    /arc\s*[ab][0-9]{3}/i.test(rawGpuRenderer) ||
+    /radeon\s*rx/i.test(rawGpuRenderer) ||
+    /geforce\s*(?:gtx|rtx)/i.test(rawGpuRenderer)
+  );
+
   let deviceType: DeviceScanResult['deviceType'] = 'desktop';
   let deviceTypeName = 'PC de Escritorio / Sobremesa';
 
@@ -471,7 +496,11 @@ export async function scanClientDevice(
   } else if (isMacBook) {
     deviceType = 'laptop';
     deviceTypeName = macModelName || 'MacBook Portátil';
-  } else if (hasBattery || /laptop|mobile|max-q|iris/i.test(rawGpuRenderer)) {
+  } else if (isExplicitDesktopGpu) {
+    // Definitive Desktop PC: discrete desktop graphics card detected
+    deviceType = 'desktop';
+    deviceTypeName = 'PC de Escritorio / Sobremesa';
+  } else if (isLaptopGpuIndicator || /iris|radeon 680m|radeon 780m|radeon 890m/i.test(rawGpuRenderer) || hasBattery) {
     deviceType = 'laptop';
     deviceTypeName = 'Notebook / Computadora Portátil';
   } else {
@@ -574,7 +603,7 @@ export async function scanClientDevice(
 /**
  * Intelligent Motherboard Matcher (MacBook Logic Board vs Laptop OEM vs Desktop Socket)
  */
-function matchMotherboard(
+export function matchMotherboard(
   cpu: CPU,
   motherboards: Motherboard[],
   os: string,
@@ -624,7 +653,7 @@ function matchMotherboard(
 /**
  * Enhanced GPU matcher with Apple Silicon, WebGPU, and NVIDIA/AMD/Intel detection.
  */
-function matchGpu(
+export function matchGpu(
   rendererStr: string,
   gpus: GPU[],
   isLaptop: boolean,
@@ -769,7 +798,7 @@ export function getCandidateCpusForThreads(threads: number, cpus: CPU[], isLapto
 /**
  * Enhanced CPU matcher with Apple Silicon CPU line.
  */
-function matchCpu(
+export function matchCpu(
   threads: number,
   os: string,
   renderer: string,
@@ -828,7 +857,9 @@ function matchCpu(
     ? cpus.filter((c) => c.isLaptop || c.platform === 'laptop')
     : cpus.filter((c) => !c.isLaptop && c.platform !== 'laptop');
 
-  const pool = candidates.length > 0 ? candidates : cpus;
+  const pool = candidates.length > 0
+    ? candidates
+    : (isLaptop ? cpus : cpus.filter((c) => !c.isLaptop && c.platform !== 'laptop'));
 
   const threadMatches = pool.filter((c) => Math.abs(c.threads - threads) <= 2);
   if (threadMatches.length > 0) {
@@ -845,7 +876,7 @@ function matchCpu(
 /**
  * Match RAM with Apple Unified Memory and SO-DIMMs support
  */
-function matchRam(gb: number, rams: RAM[], isLaptop: boolean, os?: string, cpu?: CPU): RAM {
+export function matchRam(gb: number, rams: RAM[], isLaptop: boolean, os?: string, cpu?: CPU): RAM {
   const pool = rams && rams.length > 0 ? rams : INITIAL_RAMS;
   const isApple = os === 'macOS' || cpu?.brand === 'Apple' || cpu?.socket === 'Apple SoC';
 
@@ -898,7 +929,7 @@ function matchRam(gb: number, rams: RAM[], isLaptop: boolean, os?: string, cpu?:
 /**
  * Match Storage with Apple Fabric APFS SSD and Gen4 NVMe support
  */
-function matchStorage(storages: Storage[], os?: string, estimatedGb = 1000): Storage {
+export function matchStorage(storages: Storage[], os?: string, estimatedGb = 1000): Storage {
   const pool = storages && storages.length > 0 ? storages : INITIAL_STORAGES;
   const isApple = os === 'macOS';
 
@@ -924,7 +955,7 @@ function matchStorage(storages: Storage[], os?: string, estimatedGb = 1000): Sto
 /**
  * Match PSU
  */
-function matchPsu(gpu: GPU, psus: PSU[], isLaptop: boolean, os?: string): PSU {
+export function matchPsu(gpu: GPU, psus: PSU[], isLaptop: boolean, os?: string): PSU {
   const pool = psus && psus.length > 0 ? psus : INITIAL_PSUS;
   if (isLaptop || os === 'macOS') {
     return (
@@ -941,6 +972,50 @@ function matchPsu(gpu: GPU, psus: PSU[], isLaptop: boolean, os?: string): PSU {
     pool[0] ||
     INITIAL_PSUS[0]
   );
+}
+
+/**
+ * Rematches all components when the user toggles between Desktop PC and Notebook
+ */
+export function rematchScanForDeviceType(
+  scan: DeviceScanResult,
+  targetType: 'desktop' | 'laptop',
+  cpus: CPU[],
+  gpus: GPU[],
+  motherboards: Motherboard[],
+  rams: RAM[],
+  storages: Storage[],
+  psus: PSU[]
+): DeviceScanResult {
+  const isLaptop = targetType === 'laptop';
+  const combinedGpuString = `${scan.webGpuAdapterName || ''} ${scan.rawGpuRenderer} ${scan.macModelName || ''}`;
+
+  const matchedGpu = matchGpu(combinedGpuString, gpus, isLaptop, scan.os, scan.logicalThreads);
+  const matchedCpu = matchCpu(scan.logicalThreads, scan.os, combinedGpuString, cpus, isLaptop, scan.macModelName);
+  const matchedMotherboard = matchMotherboard(matchedCpu, motherboards, scan.os, isLaptop);
+  const matchedRam = matchRam(scan.memoryEstimateGb, rams, isLaptop, scan.os, matchedCpu);
+  const matchedStorage = scan.matchedStorage || matchStorage(storages, scan.os, scan.storageEstimateGb);
+  const matchedPsu = matchPsu(matchedGpu, psus, isLaptop, scan.os);
+
+  const newDeviceTypeName = isLaptop
+    ? (scan.os === 'macOS' ? (scan.macModelName || 'MacBook Portátil') : 'Notebook / Computadora Portátil')
+    : (scan.os === 'macOS' ? (scan.macModelName || 'Mac Desktop') : 'PC de Escritorio / Sobremesa');
+
+  const updatedDetails = [...scan.detectionDetails];
+  updatedDetails.push(`[Ajuste de Usuario]: Plataforma alternada a ${newDeviceTypeName} (reemparejados CPU, GPU, Placa, RAM y PSU)`);
+
+  return {
+    ...scan,
+    deviceType: targetType,
+    deviceTypeName: newDeviceTypeName,
+    matchedCpu,
+    matchedGpu,
+    matchedMotherboard,
+    matchedRam,
+    matchedStorage,
+    matchedPsu,
+    detectionDetails: updatedDetails
+  };
 }
 
 /**

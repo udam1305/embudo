@@ -369,7 +369,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithGoogle = async () => {
-    await signInWithPopup(auth, googleProvider);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-blocked') {
+        throw new Error('La ventana emergente de Google fue bloqueada por tu navegador. Permite las ventanas emergentes o utiliza inicio de sesión por correo.');
+      } else if (err?.code === 'auth/unauthorized-domain') {
+        throw new Error('Este dominio aún no está en la lista de dominios autorizados de Firebase OAuth. Por favor inicia sesión con correo y contraseña.');
+      } else if (err?.code === 'auth/popup-closed-by-user') {
+        throw new Error('Se cerró la ventana de autenticación antes de completar el inicio de sesión.');
+      }
+      throw err;
+    }
   };
 
   const logout = async () => {

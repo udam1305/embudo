@@ -31,7 +31,8 @@ import {
   scanClientDevice,
   parseSystemInfoText,
   DeviceScanResult,
-  requestHardwareDevicePermissions
+  requestHardwareDevicePermissions,
+  rematchScanForDeviceType
 } from '../utils/hardwareDetector';
 import confetti from 'canvas-confetti';
 
@@ -102,6 +103,21 @@ export const DeviceScannerModal: React.FC<DeviceScannerModalProps> = ({
     setRequestingPerms(true);
     await handleRunScan(true);
     setRequestingPerms(false);
+  };
+
+  const handleToggleDeviceType = (target: 'desktop' | 'laptop') => {
+    if (!scanResult || scanResult.deviceType === target) return;
+    const rematched = rematchScanForDeviceType(
+      scanResult,
+      target,
+      cpus,
+      gpus,
+      INITIAL_MOTHERBOARDS,
+      rams,
+      storages,
+      psus
+    );
+    setScanResult(rematched);
   };
 
   useEffect(() => {
@@ -380,6 +396,65 @@ export const DeviceScannerModal: React.FC<DeviceScannerModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Interactive Platform Selector (Desktop PC vs Notebook / Laptop Override) */}
+                  {scanResult.deviceType !== 'smartphone' && (
+                    <div className="bg-gradient-to-r from-[#141A26] via-[#161F2E] to-[#10141E] border border-cyan-500/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+                          {scanResult.deviceType === 'desktop' ? (
+                            <Monitor className="w-5 h-5 text-cyan-400" />
+                          ) : (
+                            <Laptop className="w-5 h-5 text-purple-400" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-white tracking-wide uppercase">
+                              Plataforma de Hardware:
+                            </span>
+                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
+                              scanResult.deviceType === 'desktop'
+                                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                                : 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                            }`}>
+                              {scanResult.deviceType === 'desktop' ? '🖥️ PC de Escritorio / Torre' : '💻 Notebook / Portátil'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-300 mt-0.5">
+                            ¿Tu equipo es de torre o portátil? Selecciona para cambiar de procesador, placa base y consumo al instante.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 bg-[#0C1017] p-1.5 rounded-xl border border-slate-700/80 shrink-0 self-start sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDeviceType('desktop')}
+                          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            scanResult.deviceType === 'desktop'
+                              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/30'
+                              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                          }`}
+                        >
+                          <Monitor className="w-4 h-4" />
+                          <span>PC de Escritorio</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDeviceType('laptop')}
+                          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            scanResult.deviceType === 'laptop'
+                              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
+                              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                          }`}
+                        >
+                          <Laptop className="w-4 h-4" />
+                          <span>Notebook / Laptop</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Component Breakdown Grid (Smartphones vs PC/Mac) */}
                   {scanResult.deviceType === 'smartphone' ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -508,8 +583,13 @@ export const DeviceScannerModal: React.FC<DeviceScannerModalProps> = ({
                         <div className="text-sm font-bold text-white truncate" title={scanResult.matchedGpu.name}>
                           {scanResult.matchedGpu.name}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-mono truncate" title={scanResult.rawGpuRenderer}>
-                          {scanResult.webGpuAdapterName || scanResult.rawGpuRenderer.split('Direct3D')[0].slice(0, 35)}
+                        <div className="text-[11px] text-slate-400 font-mono flex items-center justify-between">
+                          <span className="truncate" title={scanResult.rawGpuRenderer}>
+                            {scanResult.webGpuAdapterName || scanResult.rawGpuRenderer.split('Direct3D')[0].slice(0, 24)}
+                          </span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border bg-slate-800/80 text-cyan-300 border-slate-700 shrink-0 ml-1">
+                            {scanResult.matchedGpu.platform === 'laptop' || scanResult.matchedGpu.isLaptop ? 'GPU Laptop' : 'GPU Desktop'}
+                          </span>
                         </div>
                       </div>
 
@@ -520,14 +600,17 @@ export const DeviceScannerModal: React.FC<DeviceScannerModalProps> = ({
                             <Cpu className="w-3.5 h-3.5 text-purple-400" /> Procesador (CPU)
                           </span>
                           <span className="text-[10px] font-mono text-purple-300">
-                            {scanResult.logicalThreads} Núcleos
+                            {scanResult.logicalThreads} Hilos
                           </span>
                         </div>
                         <div className="text-sm font-bold text-white truncate" title={scanResult.matchedCpu.name}>
                           {scanResult.matchedCpu.name}
                         </div>
-                        <div className="text-[11px] text-slate-400">
-                          {scanResult.matchedCpu.cores} Cores • Socket {scanResult.matchedCpu.socket}
+                        <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                          <span>{scanResult.matchedCpu.cores} Cores • Socket {scanResult.matchedCpu.socket}</span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border bg-slate-800/80 text-purple-300 border-slate-700 shrink-0 ml-1">
+                            {scanResult.matchedCpu.platform === 'laptop' || scanResult.matchedCpu.isLaptop ? 'CPU Laptop' : 'CPU Desktop'}
+                          </span>
                         </div>
                       </div>
 
@@ -562,10 +645,15 @@ export const DeviceScannerModal: React.FC<DeviceScannerModalProps> = ({
                         <div className="text-sm font-bold text-white truncate" title={scanResult.matchedRam.name}>
                           {scanResult.matchedRam.name || `${scanResult.matchedRam.capacityGb}GB ${scanResult.matchedRam.type}`}
                         </div>
-                        <div className="text-[11px] text-slate-400">
-                          {scanResult.os === 'macOS'
-                            ? 'Arquitectura Unificada de alta velocidad'
-                            : `${scanResult.matchedRam.speedMhz} MHz • Dual-Channel`}
+                        <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                          <span>
+                            {scanResult.os === 'macOS'
+                              ? 'Arquitectura Unificada'
+                              : `${scanResult.matchedRam.speedMhz} MHz • Dual-Channel`}
+                          </span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border bg-slate-800/80 text-pink-300 border-slate-700 shrink-0 ml-1">
+                            {scanResult.deviceType === 'laptop' ? 'SO-DIMM' : 'DIMM Desktop'}
+                          </span>
                         </div>
                       </div>
 
@@ -587,21 +675,42 @@ export const DeviceScannerModal: React.FC<DeviceScannerModalProps> = ({
                         </div>
                       </div>
 
-                      {/* 6. Screen / Display */}
+                      {/* 6. PSU / Power Card */}
                       <div className="p-4 bg-[#161B26] border border-slate-800 rounded-xl space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[10px] font-bold uppercase text-slate-400 flex items-center gap-1.5">
+                            <Zap className="w-3.5 h-3.5 text-yellow-400" /> Fuente / Alimentación
+                          </span>
+                          <span className="text-[10px] font-mono text-yellow-300">
+                            {scanResult.matchedPsu.wattage}W
+                          </span>
+                        </div>
+                        <div className="text-sm font-bold text-white truncate" title={scanResult.matchedPsu.name}>
+                          {scanResult.matchedPsu.name}
+                        </div>
+                        <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                          <span>{scanResult.matchedPsu.efficiency}</span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border bg-slate-800/80 text-yellow-300 border-slate-700 shrink-0 ml-1">
+                            {scanResult.matchedPsu.brand === 'Laptop Original' ? 'Cargador OEM' : 'Fuente ATX'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 7. Screen / Display */}
+                      <div className="p-4 bg-[#161B26] border border-slate-800 rounded-xl space-y-1.5 col-span-1 sm:col-span-2 lg:col-span-3">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[10px] font-bold uppercase text-slate-400 flex items-center gap-1.5">
                             <Monitor className="w-3.5 h-3.5 text-emerald-400" /> Pantalla & Resolución
                           </span>
                           <span className="text-[10px] font-mono text-emerald-300">
-                            {scanResult.pixelRatio}x Retina
+                            {scanResult.pixelRatio}x Retina • {scanResult.displayHz}Hz
                           </span>
                         </div>
                         <div className="text-sm font-bold text-white truncate">
                           {scanResult.resolutionLabel}
                         </div>
                         <div className="text-[11px] text-slate-400">
-                          {scanResult.screenWidth} x {scanResult.screenHeight} px @ {scanResult.displayHz}Hz
+                          {scanResult.screenWidth} x {scanResult.screenHeight} px físicos • Refresco verificado a {scanResult.displayHz}Hz
                         </div>
                       </div>
                     </div>

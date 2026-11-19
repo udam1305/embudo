@@ -80,7 +80,18 @@ export const AccountView: React.FC<AccountViewProps> = ({ setActiveTab }) => {
     try {
       await loginWithGoogle();
     } catch (err: any) {
-      setAuthError(err.message || 'Error al iniciar con Google');
+      console.warn('[Auth] Google login error:', err);
+      if (err.code === 'auth/popup-blocked') {
+        setAuthError('El navegador bloqueó la ventana emergente de Google. Habilita las ventanas emergentes en tu navegador o inicia sesión directamente con Correo y Contraseña.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setAuthError('El dominio actual de la app no está en los dominios autorizados de Firebase Console. Puedes ingresar inmediatamente registrándote con Correo y Contraseña.');
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setAuthError('Se cerró la ventana de Google antes de finalizar el inicio de sesión.');
+      } else if (err.message?.includes('400') || err.message?.includes('401') || err.message?.includes('malformed')) {
+        setAuthError('Error de solicitud malformada (400/401 de Google). Esto ocurre por cookies corruptas de Google en el navegador. Borra las cookies del navegador o regístrate con Correo y Contraseña abajo.');
+      } else {
+        setAuthError(err.message || 'Error al iniciar con Google. Te recomendamos usar Correo y Contraseña.');
+      }
     } finally {
       setLoading(false);
     }

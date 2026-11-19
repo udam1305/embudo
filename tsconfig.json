@@ -23,9 +23,5 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "exclude": [
-    "node_modules",
-    "dist",
-    "embudo"
-  ]
+  "exclude": ["node_modules", "dist", "embudo"]
 }

@@ -676,4 +676,16 @@ app.post('/api/comments/:id/like', (req: Request, res: Response) => {
   }
 });
 
+// Global Error Handler for malformed URIs, JSON syntax errors, and oversized headers
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof URIError) {
+    return res.status(400).json({ error: 'URL malformada o parámetros no válidos' });
+  }
+  if (err?.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'Formato de cuerpo de solicitud (JSON) incorrecto' });
+  }
+  console.error('[Server Error]:', err);
+  res.status(500).json({ error: 'Error interno del servidor' });
+});
+
 export default app;

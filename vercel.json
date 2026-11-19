@@ -2,20 +2,18 @@
   "version": 2,
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist",
-  "redirects": [
-    {
-      "source": "/docs",
-      "destination": "/docs/",
-      "permanent": true
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "server/data/buildcores/**"
     }
-  ],
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api"
     },
     {
-      "source": "/((?!api(?:/|$)|docs(?:/|$)).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
