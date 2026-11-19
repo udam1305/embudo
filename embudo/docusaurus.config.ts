@@ -12,7 +12,7 @@ const config: Config = {
     v4: true,
   },
 
-  url: 'https://embudo.tech',
+  url: 'https://embudo-xi.vercel.app',
   baseUrl: '/docs/',
 
   organizationName: 'embudo-tech',

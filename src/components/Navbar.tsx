@@ -153,7 +153,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               onClick={() => handleNavClick('account')}
               className="px-4 sm:px-5 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-full font-bold shadow-lg shadow-cyan-900/30 transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
             >
-              <div className={`w-2 h-2 rounded-full ${user ? 'bg-emerald-400' : 'bg-white/80'}`} />
+              {user && <div className="w-2 h-2 rounded-full bg-emerald-400" />}
               <span>{user ? (user.displayName || user.email?.split('@')[0] || 'CUENTA') : 'LOGIN'}</span>
             </button>
 
