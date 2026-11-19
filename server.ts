@@ -248,11 +248,12 @@ async function startServer() {
 
   // --- DOCUSAURUS DOCUMENTATION SITE (/docs) ---
   const resolveDocsBuildPath = () => {
-    const distDocs = path.join(process.cwd(), 'dist', 'docs');
-    if (fs.existsSync(distDocs)) return distDocs;
-    const embudoBuild = path.join(process.cwd(), 'embudo', 'build');
-    if (fs.existsSync(embudoBuild)) return embudoBuild;
-    return null;
+    const candidates = [
+      path.join(__dirname, 'docs'),
+      path.join(process.cwd(), 'dist', 'docs'),
+      path.join(process.cwd(), 'embudo', 'build'),
+    ];
+    return candidates.find((p) => fs.existsSync(p)) || null;
   };
 
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -262,6 +263,7 @@ async function startServer() {
     }
     next();
   });
+
   app.use('/docs', (req: Request, res: Response, next: NextFunction) => {
     const docsBuildPath = resolveDocsBuildPath();
     if (docsBuildPath) {
@@ -269,6 +271,7 @@ async function startServer() {
     }
     next();
   });
+
   app.get('/docs/*', (_req: Request, res: Response, next: NextFunction) => {
     const docsBuildPath = resolveDocsBuildPath();
     if (!docsBuildPath) {
@@ -309,9 +312,16 @@ async function startServer() {
       }
     });
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = fs.existsSync(path.join(__dirname, 'index.html'))
+      ? __dirname
+      : path.join(process.cwd(), 'dist');
+
     app.use(express.static(distPath));
-    app.get('*', (req: Request, res: Response) => {
+
+    app.get('*', (req: Request, res: Response, next: NextFunction) => {
+      if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/docs')) {
+        return next();
+      }
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
